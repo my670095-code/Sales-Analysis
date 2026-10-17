@@ -348,7 +348,7 @@
 
   <div class="view-section active" id="chartView">
     <div class="charts-grid" id="chartsPanel" style="display:none;">
-      <div class="chart-card"><h3><i class="fas fa-store"></i> Top Stores by Net Sales</h3><div class="chart-container"><canvas id="topStoresChart"></canvas></div></div>
+      <div class="chart-card"><h3><i class="fas fa-store"></i> Top Stores — 2025 vs 2026 vs Target</h3><div class="chart-container"><canvas id="topStoresChart"></canvas></div></div>
       <div class="chart-card"><h3><i class="fas fa-user-tie"></i> Area Manager Performance</h3><div class="chart-container"><canvas id="areaChart"></canvas></div></div>
       <div class="chart-card full-width"><h3><i class="fas fa-chart-bar"></i> Store-wise Net Sales & Target</h3><div class="chart-container" style="height:300px"><canvas id="storeComparisonChart"></canvas></div></div>
       <div class="chart-card full-width"><h3><i class="fas fa-chart-line"></i> Monthly Net Sales Trend</h3><div class="chart-container"><canvas id="monthlyTrendChart"></canvas></div></div>
@@ -1662,108 +1662,297 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   function renderCharts(data){
     const tMaps = window.__targetMaps || buildTargetMap(rawData);
 
+    // ---------- helpers ----------
+    // Split a dataset into per-year nets and per-period targets.
+    const isSalesYear = y => y === 2026 || (y != null && y > 2025);
+
+    // ---------- store aggregation ----------
     const storeMap = new Map();
-    data.forEach(r=>{
+    data.forEach(r => {
       const key = r.storeCode;
-      if (!storeMap.has(key)) storeMap.set(key,{
+      if (!storeMap.has(key)) storeMap.set(key, {
         store: r.store, storeCode: r.storeCode, area: r.area,
-        net:0, gross:0, target:0, orders:0
+        net2025: 0, net2026: 0, target: 0, orders2025: 0, orders2026: 0
       });
       const s = storeMap.get(key);
-      s.net += r.net; s.gross += r.gross; s.orders += r.orders;
+      if (r.year === 2025) s.net2025 += r.net;
+      else if (isSalesYear(r.year)) s.net2026 += r.net;
+      if (r.year === 2025) s.orders2025 += r.orders;
+      else if (isSalesYear(r.year)) s.orders2026 += r.orders;
     });
 
+    // Targets: sum once per (store, area, year, month), aligned to the sales year
     const storeTargetKeys = new Set();
     data.forEach(r => {
       if (!r.year || !r.month) return;
-      const key = `${r.storeCode}||${r.area}||${r.year}||${r.month}`;
+      const targetYear = isSalesYear(r.year) ? r.year : (r.year === 2025 ? 2026 : r.year);
+      const key = `${r.storeCode}||${r.area}||${targetYear}||${r.month}`;
       if (storeTargetKeys.has(key)) return;
       storeTargetKeys.add(key);
-      const g = computeGroupTarget(tMaps, data, data, r.storeCode, r.area, r.year, r.month, false);
+      const g = computeGroupTarget(tMaps, data, data, r.storeCode, r.area, targetYear, r.month, false);
       const s = storeMap.get(r.storeCode);
       if (s) s.target += g.target;
     });
     const storeAgg = [...storeMap.values()];
 
+    // ---------- area aggregation ----------
     const areaMap = new Map();
-    data.forEach(r=>{
-      if (!areaMap.has(r.area)) areaMap.set(r.area,{area:r.area,net:0,gross:0,target:0,orders:0});
+    data.forEach(r => {
+      if (!areaMap.has(r.area)) areaMap.set(r.area, {
+        area: r.area, net2025: 0, net2026: 0, target: 0
+      });
       const a = areaMap.get(r.area);
-      a.net += r.net; a.gross += r.gross; a.orders += r.orders;
+      if (r.year === 2025) a.net2025 += r.net;
+      else if (isSalesYear(r.year)) a.net2026 += r.net;
     });
-
     const areaTargetKeys = new Set();
     data.forEach(r => {
       if (!r.year || !r.month) return;
-      const key = `${r.area}||${r.storeCode}||${r.year}||${r.month}`;
+      const targetYear = isSalesYear(r.year) ? r.year : (r.year === 2025 ? 2026 : r.year);
+      const key = `${r.area}||${r.storeCode}||${targetYear}||${r.month}`;
       if (areaTargetKeys.has(key)) return;
       areaTargetKeys.add(key);
-      const g = computeGroupTarget(tMaps, data, data, r.storeCode, r.area, r.year, r.month, false);
+      const g = computeGroupTarget(tMaps, data, data, r.storeCode, r.area, targetYear, r.month, false);
       const a = areaMap.get(r.area);
       if (a) a.target += g.target;
     });
     const areaAgg = [...areaMap.values()];
 
+    // ---------- monthly aggregation (per year + target) ----------
     const monthMap = new Map();
-    data.forEach(r=>{
-      if (r.year && r.month){
-        const key = `${r.year}-${String(r.month).padStart(2,'0')}`;
-        if (!monthMap.has(key)) monthMap.set(key,{key,label:`${MONTHS[r.month-1]} ${r.year}`,net:0});
-        monthMap.get(key).net += r.net;
-      }
+    data.forEach(r => {
+      if (!r.year || !r.month) return;
+      const key = `${r.year}-${String(r.month).padStart(2,'0')}`;
+      if (!monthMap.has(key)) monthMap.set(key, {
+        key, year: r.year, month: r.month,
+        label: `${MONTHS[r.month-1]} ${r.year}`,
+        net: 0, target: 0
+      });
+      monthMap.get(key).net += r.net;
+    });
+    // monthly targets
+    const monthTargetKeys = new Set();
+    data.forEach(r => {
+      if (!r.year || !r.month) return;
+      const targetYear = isSalesYear(r.year) ? r.year : (r.year === 2025 ? 2026 : r.year);
+      const key = `${r.storeCode}||${r.area}||${targetYear}||${r.month}`;
+      if (monthTargetKeys.has(key)) return;
+      monthTargetKeys.add(key);
+      const g = computeGroupTarget(tMaps, data, data, r.storeCode, r.area, targetYear, r.month, false);
+      const mk = `${targetYear}-${String(r.month).padStart(2,'0')}`;
+      if (monthMap.has(mk)) monthMap.get(mk).target += g.target;
     });
     const monthAgg = [...monthMap.values()].sort((a,b)=>a.key.localeCompare(b.key));
 
-    const topStores = [...storeAgg].sort((a,b)=>b.net-a.net).slice(0,12);
+    // Split monthly into aligned label buckets so 2025 & 2026 sit side-by-side by month
+    // Build a union of month numbers present, labelled by month name; keep per-year values.
+    const monthBuckets = new Map(); // 'MM' -> { label, 2025, 2026, target }
+    monthAgg.forEach(m => {
+      const mm = String(m.month).padStart(2,'0');
+      if (!monthBuckets.has(mm)) monthBuckets.set(mm, {
+        label: MONTHS[m.month-1], m2025: 0, m2026: 0, target: 0
+      });
+      const b = monthBuckets.get(mm);
+      if (m.year === 2025) b.m2025 += m.net;
+      else if (isSalesYear(m.year)) b.m2026 += m.net;
+      if (isSalesYear(m.year) || m.year === 2025) b.target += m.target;
+    });
+    const monthSeries = [...monthBuckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([,v])=>v);
+
+    // ---------- 1. Top Stores: 2025 / 2026 / Target ----------
+    const topStores = [...storeAgg]
+      .sort((a,b) => (b.net2026 + b.net2025) - (a.net2026 + a.net2025))
+      .slice(0, 12);
     const ctx1 = $('topStoresChart').getContext('2d');
     if (topStoresChartInstance) topStoresChartInstance.destroy();
     topStoresChartInstance = new Chart(ctx1, {
       type:'bar',
-      data:{ labels: topStores.map(s=>s.store.length>22?s.store.slice(0,20)+'…':s.store),
-        datasets:[{ label:'Net Sales', data: topStores.map(s=>s.net), backgroundColor:'rgba(59,130,246,.75)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:8 }]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>`Net Sales: ${fmtCur(c.raw)}`}}},
-        scales:{ y:{beginAtZero:true, ticks:{callback:v=>fmtNum(v), font:{size:11}}}, x:{ticks:{maxRotation:45, font:{size:10}}} }}
+      data:{
+        labels: topStores.map(s => s.store.length > 24 ? s.store.slice(0,22)+'…' : s.store),
+        datasets:[
+          { label:'2025', data: topStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.75)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: topStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: topStores.map(s=>s.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
+        ]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
+          tooltip:{
+            callbacks:{
+              label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
+              afterBody: items => {
+                if (!items.length) return '';
+                const s = topStores[items[0].dataIndex];
+                const lines = [];
+                if (s.net2025 > 0) lines.push(`LFL: ${signedPct(s.net2026, s.net2025)}`);
+                if (s.target > 0)  lines.push(`vs Target: ${signedPct(s.net2026, s.target)}`);
+                return lines;
+              }
+            }
+          }
+        },
+        scales:{
+          x:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:10} } },
+          y:{ ticks:{ font:{size:10} } }
+        }
+      }
     });
 
+    // ---------- 2. Area Manager: 2025 / 2026 / Target ----------
+    const areasSorted = [...areaAgg].sort((a,b) => (b.net2026 + b.net2025) - (a.net2026 + a.net2025));
     const ctx2 = $('areaChart').getContext('2d');
     if (areaChartInstance) areaChartInstance.destroy();
     areaChartInstance = new Chart(ctx2, {
-      type:'doughnut',
-      data:{ labels: areaAgg.map(a=>a.area),
-        datasets:[{ data: areaAgg.map(a=>a.net),
-          backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#6366f1','#14b8a6','#a855f7'],
-          borderWidth:2, borderColor:'#fff' }]},
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
-        plugins:{ legend:{position:'bottom', labels:{boxWidth:12, padding:10, font:{size:11}}},
-          tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0); const p=t>0?((c.raw/t)*100).toFixed(1):0; return `${c.label}: ${fmtCur(c.raw)} (${p}%)`;}}} }}
+      type:'bar',
+      data:{
+        labels: areasSorted.map(a => a.area),
+        datasets:[
+          { label:'2025', data: areasSorted.map(a=>a.net2025), backgroundColor:'rgba(148,163,184,.75)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: areasSorted.map(a=>a.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: areasSorted.map(a=>a.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
+          tooltip:{
+            callbacks:{
+              label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
+              afterBody: items => {
+                if (!items.length) return '';
+                const a = areasSorted[items[0].dataIndex];
+                const lines = [];
+                if (a.net2025 > 0) lines.push(`LFL: ${signedPct(a.net2026, a.net2025)}`);
+                if (a.target > 0)  lines.push(`vs Target: ${signedPct(a.net2026, a.target)}`);
+                return lines;
+              }
+            }
+          }
+        },
+        scales:{
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ maxRotation:40, font:{size:10} } }
+        }
+      }
     });
 
-    const top20 = [...storeAgg].sort((a,b)=>b.net-a.net).slice(0,20);
+    // ---------- 3. Store Target Achievement (2025 / 2026 / Target, ranked by 2026 ach) ----------
+    const rankedStores = [...storeAgg]
+      .map(s => ({ ...s, ach: s.target > 0 ? s.net2026 / s.target : null }))
+      .sort((a,b) => {
+        const av = a.ach == null ? -Infinity : a.ach;
+        const bv = b.ach == null ? -Infinity : b.ach;
+        return bv - av;
+      })
+      .slice(0, 20);
+
     const ctx3 = $('storeComparisonChart').getContext('2d');
     if (storeComparisonChartInstance) storeComparisonChartInstance.destroy();
     storeComparisonChartInstance = new Chart(ctx3, {
       type:'bar',
-      data:{ labels: top20.map(s=>s.store.length>28?s.store.slice(0,25)+'…':s.store),
+      data:{
+        labels: rankedStores.map(s => s.store.length > 28 ? s.store.slice(0,26)+'…' : s.store),
         datasets:[
-          { label:'Net Sales', data: top20.map(s=>s.net), backgroundColor:'rgba(59,130,246,.8)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
-          { label:'Target',     data: top20.map(s=>s.target), backgroundColor:'rgba(245,158,11,.5)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
-        ]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{position:'top', labels:{boxWidth:12, padding:12}}, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmtCur(c.raw)}`}}},
-        scales:{ y:{beginAtZero:true, ticks:{callback:v=>fmtNum(v), font:{size:11}}}, x:{ticks:{maxRotation:45, font:{size:9}}} }}
+          { label:'2025', data: rankedStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.7)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: rankedStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: rankedStores.map(s=>s.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
+          tooltip:{
+            callbacks:{
+              label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
+              afterBody: items => {
+                if (!items.length) return '';
+                const s = rankedStores[items[0].dataIndex];
+                const lines = [];
+                if (s.net2025 > 0) lines.push(`LFL: ${signedPct(s.net2026, s.net2025)}`);
+                if (s.target > 0)  lines.push(`vs Target: ${signedPct(s.net2026, s.target)}`);
+                return lines;
+              }
+            }
+          }
+        },
+        scales:{
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ maxRotation:45, font:{size:9} } }
+        }
+      }
     });
 
+    // ---------- 4. Monthly Trend: 2025 / 2026 / Target ----------
     const ctx4 = $('monthlyTrendChart').getContext('2d');
     if (monthlyTrendChartInstance) monthlyTrendChartInstance.destroy();
     monthlyTrendChartInstance = new Chart(ctx4, {
       type:'line',
-      data:{ labels: monthAgg.map(m=>m.label),
-        datasets:[{ label:'Net Sales', data: monthAgg.map(m=>m.net), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.08)', fill:true, tension:.3, pointRadius:5, pointBackgroundColor:'#3b82f6', borderWidth:2.5 }]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>`Net Sales: ${fmtCur(c.raw)}`}}},
-        scales:{ y:{beginAtZero:true, ticks:{callback:v=>fmtNum(v), font:{size:11}}}, x:{ticks:{font:{size:11}}} }}
+      data:{
+        labels: monthSeries.map(m=>m.label),
+        datasets:[
+          {
+            label:'2025',
+            data: monthSeries.map(m=>m.m2025),
+            borderColor:'#94a3b8',
+            backgroundColor:'transparent',
+            tension:.3, pointRadius:3, pointBackgroundColor:'#94a3b8',
+            borderWidth:1.6, borderDash:[3,3], fill:false
+          },
+          {
+            label:'2026',
+            data: monthSeries.map(m=>m.m2026),
+            borderColor:'#3b82f6',
+            backgroundColor:'rgba(59,130,246,.08)',
+            tension:.3, pointRadius:4, pointBackgroundColor:'#3b82f6',
+            borderWidth:2.5, fill:true
+          },
+          {
+            label:'Target',
+            data: monthSeries.map(m=>m.target),
+            borderColor:'#f59e0b',
+            backgroundColor:'transparent',
+            tension:.3, pointRadius:4, pointBackgroundColor:'#f59e0b',
+            borderWidth:2, borderDash:[6,4], fill:false
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
+          tooltip:{
+            callbacks:{
+              label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
+              afterBody: items => {
+                if (!items.length) return '';
+                const b = monthSeries[items[0].dataIndex];
+                const lines = [];
+                if (b.m2025 > 0) lines.push(`LFL: ${signedPct(b.m2026, b.m2025)}`);
+                if (b.target > 0) lines.push(`vs Target: ${signedPct(b.m2026, b.target)}`);
+                return lines;
+              }
+            }
+          }
+        },
+        scales:{
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ font:{size:11} } }
+        }
+      }
     });
+
+    // ---------- local helper: signed % ----------
+    function signedPct(cur, base){
+      if (!isFinite(cur) || !isFinite(base) || base === 0) return '—';
+      const d = ((cur / base) - 1) * 100;
+      return (d >= 0 ? '+' : '') + d.toFixed(1) + '%';
+    }
   }
 
   function renderTable(data){

@@ -6,7 +6,7 @@
   <title>Sales Dashboard – Target-aware</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1471,8 +1471,9 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  // =====================================================
-  // EXPORT — PDF
+ 
+   // =====================================================
+  // EXPORT — PDF  (print-window; handles 1000+ rows)
   // =====================================================
   exportPdfBtn.addEventListener('click', () => {
     if (!filteredData.length){ alert('No data to export. Please load a file first.'); return; }
@@ -1482,6 +1483,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
 
     const tableEl = document.getElementById('dataTable');
     const clone = tableEl.cloneNode(true);
+    clone.removeAttribute('id');
 
     const th2025 = clone.querySelector('#groupHeader2025'); if (th2025) th2025.textContent = '2025';
     const thPrev = clone.querySelector('#groupHeaderPrev'); if (thPrev) thPrev.textContent = prevMonthFull;
@@ -1498,78 +1500,91 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     if (selS.length) filters.push(`Store: ${selS.join(', ')}`);
     filters.push(`Day: ${dayFrom.value || '1'}–${dayTo.value || '31'}`);
     if (adsMode) filters.push('ADS mode: ON');
-    const wrapper = document.createElement('div');
-    wrapper.style.padding = '20px';
-    wrapper.style.fontFamily = 'Inter, system-ui, sans-serif';
-    wrapper.style.color = '#0b1b33';
-        wrapper.style.width = '1600px';
-    wrapper.style.position = 'absolute';
-    wrapper.style.top = (window.scrollY) + 'px';
-    wrapper.style.left = (window.scrollX) + 'px';
-    wrapper.style.zIndex = '-1';
-    wrapper.style.background = '#ffffff';
-    wrapper.style.opacity = '0.01';
-    wrapper.style.pointerEvents = 'none';
-    wrapper.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:2px solid #3b82f6; padding-bottom:12px;">
-        <div>
-          <div style="font-size:1.3rem; font-weight:800; letter-spacing:-.3px;">Sales Performance Report</div>
-          <div style="font-size:.8rem; color:#64748b; margin-top:4px;">Detailed Store Performance</div>
-        </div>
-        <div style="text-align:right; font-size:.75rem; color:#64748b;">
-          <div>Generated: ${new Date().toLocaleString()}</div>
-          <div style="margin-top:2px;">${filters.join(' · ')}</div>
-        </div>
-      </div>
-    `;
 
-    const tableWrap = document.createElement('div');
-    tableWrap.style.width = '100%';
-    tableWrap.style.overflow = 'visible';
-    tableWrap.appendChild(clone);
-    wrapper.appendChild(tableWrap);
+    const rowCount = clone.querySelectorAll('tbody tr').length;
+    const now = new Date();
 
-    const style = document.createElement('style');
-    style.textContent = `
-      .pdf-clone-table, .pdf-clone-table * { box-sizing:border-box }
-      .pdf-clone-table { width:100%; border-collapse:collapse; font-size:9px; font-family: Inter, sans-serif }
-      .pdf-clone-table th, .pdf-clone-table td { padding:5px 4px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
-      .pdf-clone-table th:first-child, .pdf-clone-table th.left-cell,
-      .pdf-clone-table td:first-child, .pdf-clone-table td.left-cell { text-align:left }
-      .pdf-clone-table thead tr:first-child th { background:#f8fafc !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table th.group-2025  { background:#eff6ff !important; color:#1d4ed8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table th.group-prev  { background:#fef9ee !important; color:#b45309 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table th.group-2026  { background:#f0fdf4 !important; color:#15803d !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table th.group-ratios{ background:#faf5ff !important; color:#7e22ce !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table td.cell-2025 { background:#f8fbff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table td.cell-prev { background:#fffdf4 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table td.cell-2026 { background:#f7fdf9 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table tr.subtotal-row td { background:#e8f0fe !important; font-weight:800 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact }
-      .pdf-clone-table .cell-positive { color:#15803d !important }
-      .pdf-clone-table .cell-negative { color:#b91c1c !important }
-      .pdf-clone-table .pct-up { color:#15803d !important }
-      .pdf-clone-table .pct-down { color:#b91c1c !important }       
-      .pdf-clone-table tr { page-break-inside: avoid; break-inside: avoid; }
-    `;
-        clone.classList.add('pdf-clone-table');
-    wrapper.appendChild(style);
+    const printHTML = `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<title>Sales Performance Report — ${now.toISOString().slice(0,10)}</title>
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #0b1b33; background:#fff; margin:0; padding:0;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .pdf-head {
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:12px; border-bottom:2px solid #3b82f6; padding-bottom:10px;
+  }
+  .pdf-head h1 { font-size:16px; font-weight:800; letter-spacing:-.3px; margin:0; }
+  .pdf-head .sub { font-size:9px; color:#64748b; margin-top:3px; }
+  .pdf-head .meta { text-align:right; font-size:9px; color:#64748b; line-height:1.4; }
 
-    // KEY FIX: html2canvas needs the node attached and laid out
-    document.body.appendChild(wrapper);
+  table.pdf-clone-table { width:100%; border-collapse:collapse; font-size:8px; }
+  table.pdf-clone-table th, table.pdf-clone-table td {
+    padding:3px 4px; border-bottom:1px solid #eef2f8;
+    text-align:right; white-space:nowrap;
+  }
+  table.pdf-clone-table th:first-child, table.pdf-clone-table td:first-child,
+  table.pdf-clone-table th.left-cell, table.pdf-clone-table td.left-cell { text-align:left; }
+  table.pdf-clone-table thead th {
+    background:#f8fafc; font-size:7px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.2px; color:#475569;
+  }
+  table.pdf-clone-table th.group-2025  { background:#eff6ff; color:#1d4ed8; }
+  table.pdf-clone-table th.group-prev  { background:#fef9ee; color:#b45309; }
+  table.pdf-clone-table th.group-2026  { background:#f0fdf4; color:#15803d; }
+  table.pdf-clone-table th.group-ratios{ background:#faf5ff; color:#7e22ce; }
+  table.pdf-clone-table td.cell-2025 { background:#f8fbff; }
+  table.pdf-clone-table td.cell-prev { background:#fffdf4; }
+  table.pdf-clone-table td.cell-2026 { background:#f7fdf9; }
+  table.pdf-clone-table tr.subtotal-row td {
+    background:#e8f0fe !important; font-weight:800 !important;
+    border-top:1px solid #3b82f6 !important;
+  }
+  table.pdf-clone-table .cell-positive { color:#15803d; }
+  table.pdf-clone-table .cell-negative { color:#b91c1c; }
+  table.pdf-clone-table .pct-up { color:#15803d; }
+  table.pdf-clone-table .pct-down { color:#b91c1c; }
+  table.pdf-clone-table tr { page-break-inside: avoid; break-inside: avoid; }
+  table.pdf-clone-table thead { display: table-header-group; }
+  @media print {
+    body { margin: 0; }
+    .no-print { display:none !important; }
+  }
+  .toolbar {
+    position: fixed; top: 10px; right: 10px; z-index: 9999;
+    background:#3b82f6; color:#fff; border:none; border-radius:8px;
+    padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow: 0 4px 12px rgba(59,130,246,.4);
+  }
+  .toolbar:hover { background:#2563eb; }
+  @media print { .toolbar { display:none; } }
+</style>
+</head><body>
+  <button class="toolbar no-print" onclick="window.print()">Save as PDF</button>
+  <div class="pdf-head">
+    <div>
+      <h1>Sales Performance Report</h1>
+      <div class="sub">Detailed Store Performance · ${rowCount} rows</div>
+    </div>
+    <div class="meta">
+      <div>Generated: ${now.toLocaleString()}</div>
+      <div>${filters.join(' · ')}</div>
+    </div>
+  </div>
+  ${clone.outerHTML.replace(/^<table[^>]*>/, m => m.replace('<table', '<table class="pdf-clone-table"'))}
+</body></html>`;
 
-    const today = new Date().toISOString().slice(0,10);
-    const opt = {
-      margin: [8, 8, 10, 8],
-      filename: `Sales_Performance_${today}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    };
-
-    html2pdf().set(opt).from(wrapper).save()
-      .then(() => wrapper.remove())
-      .catch(err => { console.error(err); wrapper.remove(); alert('PDF export failed: ' + (err && err.message ? err.message : err)); });
+    const win = window.open('', '_blank');
+    if (!win){ alert('Popup blocked. Please allow popups for this site to export PDF.'); return; }
+    win.document.open();
+    win.document.write(printHTML);
+    win.document.close();
   });
 
   function updateKPIs(data){

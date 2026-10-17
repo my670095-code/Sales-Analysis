@@ -103,24 +103,6 @@
     .chart-card{background:#fff;padding:18px;border-radius:22px;box-shadow:0 8px 25px rgba(0,0,0,.02);border:1px solid #eef2f8}
     .chart-card h3{font-size:.95rem;font-weight:700;color:#0b1b33;margin-bottom:14px;display:flex;align-items:center;gap:8px}
     .chart-card h3 i{color:#3b82f6;font-size:1rem}
-    .chart-card h3 .chart-sub{font-size:.72rem;font-weight:500;color:#94a3b8;letter-spacing:0;margin-left:4px}
-
-.chart-summary-strip{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:0;
-  background:#fff;border-radius:22px;border:1px solid #eef2f8;
-  box-shadow:0 8px 25px rgba(0,0,0,.02);overflow:hidden;margin-bottom:4px;
-}
-.cs-item{display:flex;flex-direction:column;gap:4px;padding:14px 18px;border-right:1px solid #eef2f8}
-.cs-item:last-child{border-right:none}
-.cs-label{font-size:.72rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-.cs-value{font-size:1.35rem;font-weight:800;color:#0b1b33;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.cs-value.up{color:#15803d}
-.cs-value.down{color:#b91c1c}
-
-@media(max-width:900px){
-  .chart-summary-strip{grid-template-columns:repeat(2,1fr)}
-  .cs-item:nth-child(2n){border-right:none}
-}
     .chart-container{position:relative;height:240px;width:100%}
     .full-width{grid-column:1/-1}
 
@@ -366,37 +348,11 @@
 
   <div class="view-section active" id="chartView">
     <div class="charts-grid" id="chartsPanel" style="display:none;">
-
-  <!-- Summary strip -->
-  <div class="chart-summary-strip full-width" id="chartSummaryStrip">
-    <div class="cs-item"><span class="cs-label">2025 Net Sales</span><span class="cs-value" id="csNet2025">—</span></div>
-    <div class="cs-item"><span class="cs-label">2026 Net Sales</span><span class="cs-value" id="csNet2026">—</span></div>
-    <div class="cs-item"><span class="cs-label">Target</span><span class="cs-value" id="csTarget">—</span></div>
-    <div class="cs-item"><span class="cs-label">LFL</span><span class="cs-value" id="csLfl">—</span></div>
-    <div class="cs-item"><span class="cs-label">Target Ach.</span><span class="cs-value" id="csTgtAch">—</span></div>
-  </div>
-
-  <div class="chart-card">
-    <h3><i class="fas fa-store"></i> Top Stores — 2025 vs 2026 vs Target</h3>
-    <div class="chart-container" style="height:320px"><canvas id="topStoresChart"></canvas></div>
-  </div>
-
-  <div class="chart-card">
-    <h3><i class="fas fa-user-tie"></i> Area Manager Performance</h3>
-    <div class="chart-container" style="height:320px"><canvas id="areaChart"></canvas></div>
-  </div>
-
-  <div class="chart-card full-width">
-    <h3><i class="fas fa-chart-bar"></i> Store-wise Net Sales &amp; Target <span class="chart-sub">(Top 15 by 2026 achievement)</span></h3>
-    <div class="chart-container" style="height:380px"><canvas id="storeComparisonChart"></canvas></div>
-  </div>
-
-  <div class="chart-card full-width">
-    <h3><i class="fas fa-chart-line"></i> Monthly Net Sales Trend</h3>
-    <div class="chart-container" style="height:300px"><canvas id="monthlyTrendChart"></canvas></div>
-  </div>
-
-</div>
+      <div class="chart-card"><h3><i class="fas fa-store"></i> Top Stores — 2025 vs 2026 vs Target</h3><div class="chart-container"><canvas id="topStoresChart"></canvas></div></div>
+      <div class="chart-card"><h3><i class="fas fa-user-tie"></i> Area Manager Performance</h3><div class="chart-container"><canvas id="areaChart"></canvas></div></div>
+      <div class="chart-card full-width"><h3><i class="fas fa-chart-bar"></i> Store-wise Net Sales & Target</h3><div class="chart-container" style="height:300px"><canvas id="storeComparisonChart"></canvas></div></div>
+      <div class="chart-card full-width"><h3><i class="fas fa-chart-line"></i> Monthly Net Sales Trend</h3><div class="chart-container"><canvas id="monthlyTrendChart"></canvas></div></div>
+    </div>
   </div>
 
   <div class="view-section" id="tableView">
@@ -1702,48 +1658,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         ? `${prevLabel}${adsSuffix}: ${fmtCur(prevNet)}  •  ${curLabel}${adsSuffix}: ${fmtCur(curNet)}`
         : 'No previous-month data');
   }
-    // ---- Chart.js plugin: draw value labels on bars & points ----
-  const valueLabelPlugin = {
-    id: 'valueLabel',
-    afterDatasetsDraw(chart, args, opts){
-      const cfg = (opts && opts.pluginOpts) || {};
-      if (!cfg.formatter) return;
-      const { ctx } = chart;
-      ctx.save();
-      ctx.font = '600 10px Inter, system-ui, sans-serif';
-      ctx.textBaseline = 'middle';
-
-      chart.data.datasets.forEach((ds, di) => {
-        const meta = chart.getDatasetMeta(di);
-        if (meta.hidden) return;
-        const isHorizontal = chart.options.indexAxis === 'y';
-        meta.data.forEach((el, i) => {
-          const val = ds.data[i];
-          if (val == null || val === 0) return;
-          const label = cfg.formatter ? cfg.formatter(val, ds) : fmtNum(val);
-          if (!label) return;
-
-          if (chart.config.type === 'line') {
-            ctx.fillStyle = ds.borderColor || '#0b1b33';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, el.x, el.y - 12);
-          } else if (isHorizontal) {
-            const dy = (di - (chart.data.datasets.length - 1) / 2) * 11;
-            ctx.fillStyle = '#334155';
-            ctx.textAlign = 'left';
-            ctx.fillText(label, el.x + 6, el.y + dy);
-          } else {
-            const dx = (di - (chart.data.datasets.length - 1) / 2) * 14;
-            ctx.fillStyle = '#334155';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, el.x + dx, el.y - 8);
-          }
-        });
-      });
-      ctx.restore();
-    }
-  };
-  Chart.register(valueLabelPlugin);
 
   function renderCharts(data){
     const tMaps = window.__targetMaps || buildTargetMap(rawData);
@@ -1845,46 +1759,27 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     const monthSeries = [...monthBuckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([,v])=>v);
 
-    // ---------- summary strip ----------
-    const totalNet2025 = storeAgg.reduce((s,x)=>s+x.net2025,0);
-    const totalNet2026 = storeAgg.reduce((s,x)=>s+x.net2026,0);
-    const totalTarget  = storeAgg.reduce((s,x)=>s+x.target,0);
-    const lflOverall   = totalNet2025>0 ? (totalNet2026/totalNet2025-1)*100 : null;
-    const tgtAchOverall= totalTarget>0 ? (totalNet2026/totalTarget-1)*100 : null;
-
-    $('csNet2025').textContent = fmtCur(totalNet2025);
-    $('csNet2026').textContent = fmtCur(totalNet2026);
-    $('csTarget').textContent  = fmtCur(totalTarget);
-    $('csLfl').textContent     = lflOverall==null?'—':(lflOverall>=0?'+':'')+lflOverall.toFixed(1)+'%';
-    $('csLfl').className       = 'cs-value ' + (lflOverall==null?'':(lflOverall>=0?'up':'down'));
-    $('csTgtAch').textContent  = tgtAchOverall==null?'—':(tgtAchOverall>=0?'+':'')+tgtAchOverall.toFixed(1)+'%';
-    $('csTgtAch').className    = 'cs-value ' + (tgtAchOverall==null?'':(tgtAchOverall>=0?'up':'down'));
-
     // ---------- 1. Top Stores: 2025 / 2026 / Target ----------
     const topStores = [...storeAgg]
       .sort((a,b) => (b.net2026 + b.net2025) - (a.net2026 + a.net2025))
-      .slice(0, 10);
+      .slice(0, 12);
     const ctx1 = $('topStoresChart').getContext('2d');
     if (topStoresChartInstance) topStoresChartInstance.destroy();
     topStoresChartInstance = new Chart(ctx1, {
       type:'bar',
       data:{
-        labels: topStores.map(s => s.store.length > 22 ? s.store.slice(0,20)+'…' : s.store),
+        labels: topStores.map(s => s.store.length > 24 ? s.store.slice(0,22)+'…' : s.store),
         datasets:[
-          { label:'2025',   data: topStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.85)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:4 },
-          { label:'2026',   data: topStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.9)',   borderColor:'rgba(59,130,246,1)',   borderWidth:1, borderRadius:4 },
-          { label:'Target', data: topStores.map(s=>s.target),  backgroundColor:'rgba(245,158,11,.55)', borderColor:'rgba(245,158,11,1)',  borderWidth:1, borderRadius:4 }
+          { label:'2025', data: topStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.75)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: topStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: topStores.map(s=>s.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
         ]
       },
       options:{
         indexAxis:'y',
         responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ right: 40 } },
         plugins:{
-          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11}, usePointStyle:true } },
-          valueLabel:{ pluginOpts:{
-            formatter: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : Math.round(v)
-          }},
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
           tooltip:{
             callbacks:{
               label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
@@ -1900,8 +1795,8 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
           }
         },
         scales:{
-          x:{ beginAtZero:true, ticks:{ callback:v=>v>=1e6?(v/1e6)+'M':v>=1e3?(v/1e3)+'K':v, font:{size:10} }, grid:{ color:'#f1f5f9' } },
-          y:{ ticks:{ font:{size:10} }, grid:{ display:false } }
+          x:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:10} } },
+          y:{ ticks:{ font:{size:10} } }
         }
       }
     });
@@ -1913,21 +1808,17 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     areaChartInstance = new Chart(ctx2, {
       type:'bar',
       data:{
-        labels: areasSorted.map(a => a.area.length > 18 ? a.area.slice(0,16)+'…' : a.area),
+        labels: areasSorted.map(a => a.area),
         datasets:[
-          { label:'2025',   data: areasSorted.map(a=>a.net2025), backgroundColor:'rgba(148,163,184,.85)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:4 },
-          { label:'2026',   data: areasSorted.map(a=>a.net2026), backgroundColor:'rgba(59,130,246,.9)',   borderColor:'rgba(59,130,246,1)',   borderWidth:1, borderRadius:4 },
-          { label:'Target', data: areasSorted.map(a=>a.target),  backgroundColor:'rgba(245,158,11,.55)', borderColor:'rgba(245,158,11,1)',  borderWidth:1, borderRadius:4 }
+          { label:'2025', data: areasSorted.map(a=>a.net2025), backgroundColor:'rgba(148,163,184,.75)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: areasSorted.map(a=>a.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: areasSorted.map(a=>a.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 18 } },
         plugins:{
-          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11}, usePointStyle:true } },
-          valueLabel:{ pluginOpts:{
-            formatter: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : Math.round(v)
-          }},
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
           tooltip:{
             callbacks:{
               label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
@@ -1943,13 +1834,13 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
           }
         },
         scales:{
-          y:{ beginAtZero:true, ticks:{ callback:v=>v>=1e6?(v/1e6)+'M':v>=1e3?(v/1e3)+'K':v, font:{size:11} }, grid:{ color:'#f1f5f9' } },
-          x:{ ticks:{ maxRotation:35, font:{size:10} }, grid:{ display:false } }
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ maxRotation:40, font:{size:10} } }
         }
       }
     });
 
-    // ---------- 3. Store Target Achievement ----------
+    // ---------- 3. Store Target Achievement (2025 / 2026 / Target, ranked by 2026 ach) ----------
     const rankedStores = [...storeAgg]
       .map(s => ({ ...s, ach: s.target > 0 ? s.net2026 / s.target : null }))
       .sort((a,b) => {
@@ -1957,28 +1848,24 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         const bv = b.ach == null ? -Infinity : b.ach;
         return bv - av;
       })
-      .slice(0, 15);
+      .slice(0, 20);
 
     const ctx3 = $('storeComparisonChart').getContext('2d');
     if (storeComparisonChartInstance) storeComparisonChartInstance.destroy();
     storeComparisonChartInstance = new Chart(ctx3, {
       type:'bar',
       data:{
-        labels: rankedStores.map(s => s.store.length > 26 ? s.store.slice(0,24)+'…' : s.store),
+        labels: rankedStores.map(s => s.store.length > 28 ? s.store.slice(0,26)+'…' : s.store),
         datasets:[
-          { label:'2025',   data: rankedStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.8)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:4 },
-          { label:'2026',   data: rankedStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.9)',   borderColor:'rgba(59,130,246,1)',   borderWidth:1, borderRadius:4 },
-          { label:'Target', data: rankedStores.map(s=>s.target),  backgroundColor:'rgba(245,158,11,.55)', borderColor:'rgba(245,158,11,1)',  borderWidth:1, borderRadius:4 }
+          { label:'2025', data: rankedStores.map(s=>s.net2025), backgroundColor:'rgba(148,163,184,.7)', borderColor:'rgba(148,163,184,1)', borderWidth:1, borderRadius:6 },
+          { label:'2026', data: rankedStores.map(s=>s.net2026), backgroundColor:'rgba(59,130,246,.85)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:6 },
+          { label:'Target', data: rankedStores.map(s=>s.target || 0), backgroundColor:'rgba(245,158,11,.45)', borderColor:'rgba(245,158,11,1)', borderWidth:1, borderRadius:6 }
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 18 } },
         plugins:{
-          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11}, usePointStyle:true } },
-          valueLabel:{ pluginOpts:{
-            formatter: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : Math.round(v)
-          }},
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
           tooltip:{
             callbacks:{
               label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
@@ -1994,13 +1881,13 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
           }
         },
         scales:{
-          y:{ beginAtZero:true, ticks:{ callback:v=>v>=1e6?(v/1e6)+'M':v>=1e3?(v/1e3)+'K':v, font:{size:11} }, grid:{ color:'#f1f5f9' } },
-          x:{ ticks:{ maxRotation:40, font:{size:9} }, grid:{ display:false } }
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ maxRotation:45, font:{size:9} } }
         }
       }
     });
 
-    // ---------- 4. Monthly Trend ----------
+    // ---------- 4. Monthly Trend: 2025 / 2026 / Target ----------
     const ctx4 = $('monthlyTrendChart').getContext('2d');
     if (monthlyTrendChartInstance) monthlyTrendChartInstance.destroy();
     monthlyTrendChartInstance = new Chart(ctx4, {
@@ -2036,16 +1923,9 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 34 } },
         interaction:{ mode:'index', intersect:false },
         plugins:{
-          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11}, usePointStyle:true } },
-          valueLabel:{ pluginOpts:{
-            formatter: (v, ds) => {
-              if (ds.label === 'Target') return '';
-              return v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : Math.round(v);
-            }
-          }},
+          legend:{ position:'top', labels:{ boxWidth:12, padding:12, font:{size:11} } },
           tooltip:{
             callbacks:{
               label: c => `${c.dataset.label}: ${fmtCur(c.raw)}`,
@@ -2061,11 +1941,12 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
           }
         },
         scales:{
-          y:{ beginAtZero:true, grace:'15%', ticks:{ callback:v=>v>=1e6?(v/1e6)+'M':v>=1e3?(v/1e3)+'K':v, font:{size:11} }, grid:{ color:'#f1f5f9' } },
-          x:{ ticks:{ font:{size:11} }, grid:{ display:false } }
+          y:{ beginAtZero:true, ticks:{ callback:v=>fmtNum(v), font:{size:11} } },
+          x:{ ticks:{ font:{size:11} } }
         }
       }
     });
+
     // ---------- local helper: signed % ----------
     function signedPct(cur, base){
       if (!isFinite(cur) || !isFinite(base) || base === 0) return '—';

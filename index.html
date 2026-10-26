@@ -1516,11 +1516,11 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     const stTgt = exportStTarget > 0 ? ((exportStNet2026 / exportStTarget) - 1) * 100 : null;
     const stMom = exportStPrevNet > 0 ? ((exportStNet2026 / exportStPrevNet) - 1) * 100 : null;
 
-    aoa.push([
+        aoa.push([
       'SUBTOTAL', `${rows.length} rows`, '', st.target > 0 ? roundOrBlank(exportStTarget) : '',
-      Number.isFinite(avgDays2025) ? Math.round(avgDays2025) : 0, roundOrBlank(exportStNet2025), roundOrBlank(exportStOrders2025), oneDecOrBlank(stAt2025),
-      Number.isFinite(avgDaysPrev) ? Math.round(avgDaysPrev) : 0, roundOrBlank(exportStPrevNet), roundOrBlank(exportStPrevOrders), oneDecOrBlank(stPrevAt),
-      Number.isFinite(avgDays2026) ? Math.round(avgDays2026) : 0, roundOrBlank(exportStNet2026), roundOrBlank(exportStOrders2026), oneDecOrBlank(stAt2026),
+      totalDays2025, roundOrBlank(exportStNet2025), roundOrBlank(exportStOrders2025), oneDecOrBlank(stAt2025),
+      totalDaysPrev, roundOrBlank(exportStPrevNet), roundOrBlank(exportStPrevOrders), oneDecOrBlank(stPrevAt),
+      totalDays2026, roundOrBlank(exportStNet2026), roundOrBlank(exportStOrders2026), oneDecOrBlank(stAt2026),
       stLfl == null ? '' : oneDecOrBlank(stLfl),
       stTgt == null ? '' : oneDecOrBlank(stTgt),
       stMom == null ? '' : oneDecOrBlank(stMom)
@@ -2330,22 +2330,21 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       if (stDisplayNet2025 > 0 || stDisplayNet2026 > 0) {
         stCellClass = stDisplayNet2026 >= stDisplayNet2025 ? 'cell-positive' : 'cell-negative';
       }
-
       // 5. Draw the Subtotal Row
       html += `<tr class="subtotal-row">
         <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
 
-        <td class="cell-2025">${Number.isFinite(avgDays2025) ? Math.round(avgDays2025) : 0}</td>
+        <td class="cell-2025">${totalDays2025}</td>
         <td class="cell-2025">${fmtCur(stDisplayNet2025)}</td>
         <td class="cell-2025">${fmtNum(stDisplayOrders2025)}</td>
         <td class="cell-2025">${fmtAT(stAt2025)}</td>
 
-        <td class="cell-prev">${Number.isFinite(avgDaysPrev) ? Math.round(avgDaysPrev) : 0}</td>
+        <td class="cell-prev">${totalDaysPrev}</td>
         <td class="cell-prev">${fmtCur(stDisplayPrevNet)}</td>
         <td class="cell-prev">${fmtNum(stDisplayPrevOrders)}</td>
         <td class="cell-prev">${fmtAT(stPrevAt)}</td>
 
-        <td class="cell-2026 ${stCellClass}">${Number.isFinite(avgDays2026) ? Math.round(avgDays2026) : 0}</td>
+        <td class="cell-2026 ${stCellClass}">${totalDays2026}</td>
         <td class="cell-2026 ${stCellClass}">${fmtCur(stDisplayNet2026)}</td>
         <td class="cell-2026 ${stCellClass}">${fmtNum(stDisplayOrders2026)}</td>
         <td class="cell-2026 ${stCellClass}">${fmtAT(stAt2026)}</td>

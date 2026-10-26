@@ -2230,10 +2230,23 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         displayPrevAt = prevAt;
       }
 
-      data.forEach(r => {
-        if (r.storeCode === g.storeCode && r.area === g.area && r.month === g.month) {
+           rawData.forEach(r => {
+        if (r.storeCode === g.storeCode && r.area === g.area) {
           if (r.net > 0) {
             const dk = `${r.year}-${r.month}-${r.day}`;
+            // Check if this row passes the current filters (except month)
+            const selStores = [...FilterState.store.selected];
+            const selAreas  = [...FilterState.area.selected];
+            const totalStores = FilterState.store.options.length;
+            const totalAreas  = FilterState.area.options.length;
+            const dFrom = dayFrom.value ? parseInt(dayFrom.value) : null;
+            const dTo   = dayTo.value   ? parseInt(dayTo.value)   : null;
+
+            if (selStores.length && selStores.length !== totalStores && !selStores.includes(r.storeCode)) return;
+            if (selAreas.length  && selAreas.length  !== totalAreas  && !selAreas.includes(r.area)) return;
+            if (dFrom != null && r.day != null && r.day < dFrom) return;
+            if (dTo   != null && r.day != null && r.day > dTo) return;
+
             if (r.year === 2025) activeDays2025Set.add(dk);
             if (r.year === 2026) activeDays2026Set.add(dk);
             if (r.year === ctx.prevYear && r.month === ctx.prevMonth) activeDaysPrevSet.add(dk);
@@ -2313,7 +2326,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       let stDisplayPrevNet = st.prevNet;
       let stDisplayPrevOrders = st.prevOrders;
 
-      if (adsMode) {
+            if (adsMode) {
         const d25 = activeDays2025Set.size || 1;
         const d26 = activeDays2026Set.size || 1;
         const dp  = activeDaysPrevSet.size || 1;

@@ -116,6 +116,10 @@
     .toggle-btn.active{background:#3b82f6;border-color:#3b82f6;color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.3)}
     .toggle-btn.active:hover{background:#2563eb}
 
+    /* NEW: LFL toggle-specific accent so it visually differs */
+    .toggle-btn.lfl-toggle.active{background:#8b5cf6;border-color:#8b5cf6;box-shadow:0 4px 12px rgba(139,92,246,.35)}
+    .toggle-btn.lfl-toggle.active:hover{background:#7c3aed}
+
     .export-btn{background:#fff;border:1.5px solid #dbe3ef;color:#475569;padding:7px 12px;border-radius:9px;font-weight:600;font-size:.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:.2s;white-space:nowrap}
     .export-btn:hover{background:#f8fafc;border-color:#cbd5e1}
     .export-btn.excel{color:#15803d;border-color:#bbf7d0}
@@ -160,6 +164,13 @@
     }
     td:first-child, td.left-cell{ text-align:left }
 
+    th.col-store, td.col-store{
+      text-align:left;
+      width:auto;
+      max-width:220px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
     th.col-manager, td.col-manager{
       text-align:left;
       width:auto;
@@ -360,6 +371,9 @@
       <div class="table-header-bar">
         <h3><i class="fas fa-table"></i> Detailed Store Performance</h3>
         <div class="table-controls">
+          <button class="toggle-btn lfl-toggle" id="lflToggle" title="Show only stores that had sales last year (2025)">
+            <i class="fas fa-filter"></i> LFL Only
+          </button>
           <button class="toggle-btn" id="adsToggle"><i class="fas fa-calculator"></i> ADS (Avg Daily Sales)</button>
           <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
           <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
@@ -370,25 +384,32 @@
           <thead>
             <tr>
               <th colspan="4" class="left-cell" style="border-bottom:2px solid #eef2f8;">&nbsp;</th>
-              <th colspan="3" class="group-2025" id="groupHeader2025">2025</th>
-              <th colspan="3" class="group-prev" id="groupHeaderPrev">Prev Month</th>
-              <th colspan="3" class="group-2026" id="groupHeader2026">2026</th>
+              <th colspan="4" class="group-2025" id="groupHeader2025">2025</th>
+              <th colspan="4" class="group-prev" id="groupHeaderPrev">Prev Month</th>
+              <th colspan="4" class="group-2026" id="groupHeader2026">2026</th>
               <th colspan="3" class="group-ratios">Ratios</th>
             </tr>
             <tr>
-              <th class="left-cell">Code</th>
+              <th class="left-cell col-store">Store</th>
               <th class="left-cell col-manager">Manager</th>
               <th>Mo</th>
               <th>Target</th>
+              
+              <th class="group-2025">Days</th>
               <th class="group-2025">Net Sales</th>
               <th class="group-2025">CC</th>
               <th class="group-2025">AT</th>
+              
+              <th class="group-prev">Days</th>
               <th class="group-prev">Net Sales</th>
               <th class="group-prev">CC</th>
               <th class="group-prev">AT</th>
+              
+              <th class="group-2026">Days</th>
               <th class="group-2026">Net Sales</th>
               <th class="group-2026">CC</th>
               <th class="group-2026">AT</th>
+              
               <th class="group-ratios th-lfl">LFL</th>
               <th class="group-ratios th-tgt">Tgt</th>
               <th class="group-ratios th-mom">MoM</th>
@@ -699,6 +720,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, storeComparisonChartInstance, monthlyTrendChartInstance;
   let adsMode = false;
+  let lflOnly = false;
   let currentView = 'charts';
 
   const $ = id => document.getElementById(id);
@@ -710,14 +732,14 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   const dayFrom = $('dayFrom'), dayTo = $('dayTo'), applyFilters = $('applyFilters'), resetFilters = $('resetFilters');
   const tableBody = $('tableBody');
   const adsToggle = $('adsToggle');
+  const lflToggle = $('lflToggle');
   const chartView = $('chartView'), tableView = $('tableView');
   const exportExcelBtn = $('exportExcel'), exportPdfBtn = $('exportPdf');
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    // --- export sanitizers (added) ---
+  
   const numOrBlank = v => (Number.isFinite(v) ? v : '');
   const roundOrBlank = v => (Number.isFinite(v) ? Math.round(v) : '');
   const oneDecOrBlank = v => (Number.isFinite(v) ? Number(v.toFixed(1)) : '');
-
 
   function fmtNum(n){ return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:0}); }
   function fmtCur(n){ return (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:0}); }
@@ -928,29 +950,35 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     const fullMonth = resolveTarget(tMaps, storeCode, area, year, month);
     if (fullMonth <= 0) return { target: 0, fullMonth: 0, availableDays: 0, selectedDays: 0 };
 
-    const availableDays = daysInMonth(year, month);
+    // --- FIXED LOGIC: Use store's actual active days instead of calendar days ---
+    const fullMonthRows = rows.filter(x => 
+      x.storeCode === storeCode && x.area === area && x.year === year && x.month === month && x.net > 0
+    );
+    const storeFullActiveDays = new Set(fullMonthRows.map(x => x.day)).size;
+    
+    const selectedRows = dataInWindow.filter(x => 
+      x.storeCode === storeCode && x.area === area && x.year === year && x.month === month && x.net > 0
+    );
+    const selectedActiveDays = new Set(selectedRows.map(x => x.day)).size;
 
-    const selDays = new Set();
-    dataInWindow.forEach(x => {
-      if (x.storeCode !== storeCode) return;
-      if (x.area !== area) return;
-      if (x.year !== year || x.month !== month) return;
-      if (x.day != null) selDays.add(x.day);
-    });
-
-    const ratio = availableDays > 0 ? Math.min(selDays.size / availableDays, 1) : 1;
+    // Fallback to calendar days if the store has zero active days or data is missing
+    const baseDays = storeFullActiveDays > 0 ? storeFullActiveDays : daysInMonth(year, month);
+    
+    // Calculate ratio based on actual active days, capped at 1
+    const ratio = baseDays > 0 ? Math.min(selectedActiveDays / baseDays, 1) : 1;
+    
     let target = fullMonth * ratio;
 
     if (adsOn) {
-      let activeDays = 0;
-      rows.forEach(x => {
-        if (x.storeCode !== storeCode || x.area !== area || x.month !== month) return;
-        if (x.net > 0) activeDays++;
-      });
-      target = target / (activeDays > 0 ? activeDays : 1);
+      target = target / (selectedActiveDays > 0 ? selectedActiveDays : 1);
     }
 
-    return { target, fullMonth, availableDays, selectedDays: selDays.size };
+    return { 
+      target, 
+      fullMonth, 
+      availableDays: baseDays, 
+      selectedDays: selectedActiveDays 
+    };
   }
 
   document.querySelectorAll('#viewToggle button').forEach(btn => {
@@ -1047,8 +1075,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         const explicitNet = (colNet >= 0) ? Number(String(row[colNet] ?? '').replace(/,/g,'')) || 0 : null;
         const amountVal = (colAmount >= 0) ? Number(String(row[colAmount] ?? '').replace(/,/g,'')) || 0 : null;
 
-               // Net Sales = Gross Amount - Incl Tax (primary definition).
-        // Fallbacks only used when Gross is missing/zero.
         let net = 0;
         if (gross > 0) {
           net = gross - (inclTaxVal || 0);
@@ -1089,7 +1115,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
 
       applyFiltersAndRender();
 
-      // Update header indicator
       if (displayName){
         showSavedIndicator(displayName, buffer.byteLength, (meta && meta.savedAt) || Date.now());
       }
@@ -1124,7 +1149,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       const buffer = evt.target.result;
       const savedAt = Date.now();
 
-      // Persist to IndexedDB in the background — do not block rendering
       try {
         await IDB.saveFile(file.name, buffer, { size: file.size, type: file.type, savedAt });
       } catch (dbErr){
@@ -1169,7 +1193,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }
       loadingState.style.display = 'flex';
       emptyState.style.display = 'none';
-      // Give the browser a tick to paint the spinner
       setTimeout(() => {
         processWorkbookBuffer(saved.buffer, saved.name, { savedAt: saved.savedAt });
       }, 30);
@@ -1289,12 +1312,22 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       updateChipLabel(k);
     });
 
+    lflOnly = false;
+    lflToggle.classList.remove('active');
+
     applyFiltersAndRender();
   });
 
   adsToggle.addEventListener('click', () => {
     adsMode = !adsMode;
     adsToggle.classList.toggle('active', adsMode);
+    updateKPIs(filteredData);
+    renderTable(filteredData);
+  });
+
+  lflToggle.addEventListener('click', () => {
+    lflOnly = !lflOnly;
+    lflToggle.classList.toggle('active', lflOnly);
     updateKPIs(filteredData);
     renderTable(filteredData);
   });
@@ -1354,18 +1387,25 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       prevMonthMap.set(key, cur);
     });
 
-    const rows = [...groupMap.values()].sort((a,b)=>b.net2026 - a.net2026);
+    let rows = [...groupMap.values()].sort((a,b)=>b.net2026 - a.net2026);
+    if (lflOnly) {
+      rows = rows.filter(g => g.net2025 > 0);
+    }
 
     const aoa = [];
+    // Merged Code & Store Name
     aoa.push([
-      'Store Code', 'Manager', 'Month', 'Target',
-      '2025 Net Sales', '2025 CC', '2025 AT',
-      `${prevMonthFull} Net Sales`, `${prevMonthFull} CC`, `${prevMonthFull} AT`,
-      '2026 Net Sales', '2026 CC', '2026 AT',
+      'Store', 'Manager', 'Month', 'Target',
+      '2025 Days', '2025 Net Sales', '2025 CC', '2025 AT',
+      `${prevMonthFull} Days`, `${prevMonthFull} Net Sales`, `${prevMonthFull} CC`, `${prevMonthFull} AT`,
+      '2026 Days', '2026 Net Sales', '2026 CC', '2026 AT',
       'LFL %', 'Target %', 'MoM %'
     ]);
 
     const st = { target:0, net2025:0, orders2025:0, net2026:0, orders2026:0, prevNet:0, prevOrders:0 };
+    const activeDays2025 = new Set();
+    const activeDays2026 = new Set();
+    const activeDaysPrev = new Set();
 
     rows.forEach(g=>{
       const rawAt2025 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
@@ -1414,16 +1454,27 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       const tgt = g.target > 0 ? ((g.net2026 / g.target) - 1) * 100 : null;
       const mom = p.net > 0 ? ((g.net2026 / p.net) - 1) * 100 : null;
 
-           aoa.push([
-        g.storeCode, g.area, g.monthLabel, g.target > 0 ? roundOrBlank(displayTarget) : '',
-        roundOrBlank(displayNet2025), roundOrBlank(displayOrders2025), oneDecOrBlank(displayAt2025),
-        roundOrBlank(displayPrevNet), roundOrBlank(displayPrevOrders), oneDecOrBlank(displayPrevAt),
-        roundOrBlank(displayNet2026), roundOrBlank(displayOrders2026), oneDecOrBlank(displayAt2026),
+      aoa.push([
+        `${g.storeCode} - ${g.store}`, g.area, g.monthLabel, g.target > 0 ? roundOrBlank(displayTarget) : '',
+        g.days2025 || 0, roundOrBlank(displayNet2025), roundOrBlank(displayOrders2025), oneDecOrBlank(displayAt2025),
+        p.activeDays || 0, roundOrBlank(displayPrevNet), roundOrBlank(displayPrevOrders), oneDecOrBlank(displayPrevAt),
+        g.days2026 || 0, roundOrBlank(displayNet2026), roundOrBlank(displayOrders2026), oneDecOrBlank(displayAt2026),
         lfl == null ? '' : oneDecOrBlank(lfl),
         tgt == null ? '' : oneDecOrBlank(tgt),
         mom == null ? '' : oneDecOrBlank(mom)
       ]);
     });
+
+    if (adsMode) {
+      filteredData.forEach(r => {
+        if (r.net > 0) {
+          const dk = `${r.year}-${r.month}-${r.day}`;
+          if (r.year === 2025) activeDays2025.add(dk);
+          if (r.year === 2026) activeDays2026.add(dk);
+          if (r.year === ctx.prevYear && r.month === ctx.prevMonth) activeDaysPrev.add(dk);
+        }
+      });
+    }
 
     const stAt2025 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
     const stAt2026 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
@@ -1432,33 +1483,50 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     const stTgt = st.target > 0 ? ((st.net2026 / st.target) - 1) * 100 : null;
     const stMom = st.prevNet > 0 ? ((st.net2026 / st.prevNet) - 1) * 100 : null;
 
-       aoa.push([
+    let exportStNet2025 = st.net2025;
+    let exportStNet2026 = st.net2026;
+    let exportStPrevNet = st.prevNet;
+    let exportStOrders2025 = st.orders2025;
+    let exportStOrders2026 = st.orders2026;
+    let exportStPrevOrders = st.prevOrders;
+
+    if (adsMode) {
+      const d25 = activeDays2025.size || 1;
+      const d26 = activeDays2026.size || 1;
+      const dp  = activeDaysPrev.size || 1;
+      exportStNet2025 = st.net2025 / d25;
+      exportStOrders2025 = st.orders2025 / d25;
+      exportStNet2026 = st.net2026 / d26;
+      exportStOrders2026 = st.orders2026 / d26;
+      exportStPrevNet = st.prevNet / dp;
+      exportStPrevOrders = st.prevOrders / dp;
+    }
+
+    aoa.push([
       'SUBTOTAL', `${rows.length} rows`, '', st.target > 0 ? roundOrBlank(st.target) : '',
-      roundOrBlank(st.net2025), roundOrBlank(st.orders2025), oneDecOrBlank(stAt2025),
-      roundOrBlank(st.prevNet), roundOrBlank(st.prevOrders), oneDecOrBlank(stPrevAt),
-      roundOrBlank(st.net2026), roundOrBlank(st.orders2026), oneDecOrBlank(stAt2026),
+      activeDays2025.size || 0, roundOrBlank(exportStNet2025), roundOrBlank(exportStOrders2025), oneDecOrBlank(stAt2025),
+      activeDaysPrev.size || 0, roundOrBlank(exportStPrevNet), roundOrBlank(exportStPrevOrders), oneDecOrBlank(stPrevAt),
+      activeDays2026.size || 0, roundOrBlank(exportStNet2026), roundOrBlank(exportStOrders2026), oneDecOrBlank(stAt2026),
       stLfl == null ? '' : oneDecOrBlank(stLfl),
       stTgt == null ? '' : oneDecOrBlank(stTgt),
       stMom == null ? '' : oneDecOrBlank(stMom)
     ]);
 
-      if (aoa.length <= 1) { alert('Nothing to export (only header row).'); return; }
+    if (aoa.length <= 1) { alert('Nothing to export (only header row).'); return; }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [
-      {wch:10},{wch:14},{wch:6},{wch:11},
-      {wch:13},{wch:9},{wch:8},
-      {wch:15},{wch:11},{wch:10},
-      {wch:13},{wch:9},{wch:8},
+      {wch:24},{wch:14},{wch:6},{wch:11},
+      {wch:9},{wch:13},{wch:9},{wch:8},
+      {wch:15},{wch:15},{wch:11},{wch:10},
+      {wch:9},{wch:13},{wch:9},{wch:8},
       {wch:9},{wch:10},{wch:9}
     ];
-        const wb = XLSX.utils.book_new();
+    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Store Performance');
-    // Make sure the data sheet is the active tab (avoids opening on an empty tab)
-        wb.Workbook = wb.Workbook || {};
+    wb.Workbook = wb.Workbook || {};
     wb.Workbook.Sheets = [{ name: 'Store Performance', Hidden: 0 }];
 
-    // Blob download (more reliable than writeFile in some browsers)
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
@@ -1500,6 +1568,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     if (selS.length) filters.push(`Store: ${selS.join(', ')}`);
     filters.push(`Day: ${dayFrom.value || '1'}–${dayTo.value || '31'}`);
     if (adsMode) filters.push('ADS mode: ON');
+    if (lflOnly) filters.push('LFL only: ON');
 
     const rowCount = clone.querySelectorAll('tbody tr').length;
     const now = new Date();
@@ -1588,21 +1657,33 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   });
 
   function updateKPIs(data){
-    const data2025 = data.filter(r => r.year === 2025);
-    const data2026 = data.filter(r => r.year === 2026);
+    let salesData = data;
+    if (lflOnly) {
+      const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
+      salesData = data.filter(r => storesWith2025Sales.has(r.storeCode));
+    }
+
+    const data2025 = salesData.filter(r => r.year === 2025);
+    const data2026 = salesData.filter(r => r.year === 2026);
 
     const sum = (arr, key) => arr.reduce((s,r) => s + (r[key]||0), 0);
 
-    const activeDays2025 = data2025.filter(r => r.net > 0).length;
-    const activeDays2026 = data2026.filter(r => r.net > 0).length;
+    const getActiveDays = (arr) => {
+      const days = new Set();
+      arr.forEach(r => { if (r.net > 0 && r.year && r.month && r.day) days.add(`${r.year}-${r.month}-${r.day}`); });
+      return days.size || 1;
+    };
+
+    const activeDays2025 = getActiveDays(data2025);
+    const activeDays2026 = getActiveDays(data2026);
 
     const rawNet25 = sum(data2025,'net'), rawNet26 = sum(data2026,'net');
     const rawCc25  = sum(data2025,'orders'), rawCc26  = sum(data2026,'orders');
 
-    const net25 = adsMode ? rawNet25 / (activeDays2025 || 1) : rawNet25;
-    const net26 = adsMode ? rawNet26 / (activeDays2026 || 1) : rawNet26;
-    const cc25  = adsMode ? rawCc25  / (activeDays2025 || 1) : rawCc25;
-    const cc26  = adsMode ? rawCc26  / (activeDays2026 || 1) : rawCc26;
+    const net25 = adsMode ? rawNet25 / activeDays2025 : rawNet25;
+    const net26 = adsMode ? rawNet26 / activeDays2026 : rawNet26;
+    const cc25  = adsMode ? rawCc25  / activeDays2025 : rawCc25;
+    const cc26  = adsMode ? rawCc26  / activeDays2026 : rawCc26;
 
     const at25 = rawCc25 > 0 ? rawNet25 / rawCc25 : 0;
     const at26 = rawCc26 > 0 ? rawNet26 / rawCc26 : 0;
@@ -1610,18 +1691,18 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     const tMaps = buildTargetMap(rawData);
     window.__targetMaps = tMaps;
 
-    const dataYears = [...new Set(data.map(r=>r.year).filter(y=>y!=null))];
+    const dataYears = [...new Set(salesData.map(r=>r.year).filter(y=>y!=null))];
     const salesYear = dataYears.includes(2026) ? 2026 : (dataYears.length ? Math.max(...dataYears) : null);
     window.__salesYear = salesYear;
 
     const targetLabelEl = $('kpiTargetYearLabel');
     if (targetLabelEl) targetLabelEl.textContent = salesYear != null ? salesYear : '—';
 
-    const salesRows = data.filter(r => r.year === salesYear);
+    const salesRows = salesData.filter(r => r.year === salesYear);
     const rawSalesYearNet = sum(salesRows, 'net');
-    const activeDaysSalesYear = salesRows.filter(r => r.net > 0).length;
+    const activeDaysSalesYear = getActiveDays(salesRows);
     const salesYearNet = adsMode
-      ? rawSalesYearNet / (activeDaysSalesYear || 1)
+      ? rawSalesYearNet / activeDaysSalesYear
       : rawSalesYearNet;
 
     const targetGroups = new Map();
@@ -1629,7 +1710,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       if (r.year == null || r.month == null) return;
       const key = `${r.storeCode}||${r.area}||${r.month}`;
       if (targetGroups.has(key)) return;
-      const g = computeGroupTarget(tMaps, salesRows, data, r.storeCode, r.area, r.year, r.month, false);
+      const g = computeGroupTarget(tMaps, salesRows, salesData, r.storeCode, r.area, r.year, r.month, false);
       targetGroups.set(key, g.target);
     });
 
@@ -1637,7 +1718,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     targetGroups.forEach(v => fullMonthTarget += v);
 
     const targetForYear = adsMode
-      ? fullMonthTarget / (activeDaysSalesYear || 1)
+      ? fullMonthTarget / activeDaysSalesYear
       : fullMonthTarget;
 
     const adsSuffix = adsMode ? ' (ADS)' : '';
@@ -1680,15 +1761,17 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       return true;
     }
 
-    const curRows = filteredData.filter(r => r.year === ctx.curYear && r.month === ctx.curMonth);
-    const prevRows = rawData.filter(r => r.year === ctx.prevYear && r.month === ctx.prevMonth).filter(passNonMonthFilters);
+    let curRows = salesData.filter(r => r.year === ctx.curYear && r.month === ctx.curMonth);
+    const prevRows = rawData.filter(r => r.year === ctx.prevYear && r.month === ctx.prevMonth)
+                            .filter(passNonMonthFilters)
+                            .filter(r => !lflOnly || salesData.some(sr => sr.storeCode === r.storeCode));
 
     let curNet = sum(curRows, 'net');
     let prevNet = sum(prevRows, 'net');
 
     if (adsMode) {
-      const curActive = curRows.filter(r => r.net > 0).length || 1;
-      const prevActive = prevRows.filter(r => r.net > 0).length || 1;
+      const curActive = getActiveDays(curRows);
+      const prevActive = getActiveDays(prevRows);
       curNet  = curNet  / curActive;
       prevNet = prevNet / prevActive;
     }
@@ -1708,11 +1791,8 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   function renderCharts(data){
     const tMaps = window.__targetMaps || buildTargetMap(rawData);
 
-    // ---------- helpers ----------
-    // Split a dataset into per-year nets and per-period targets.
     const isSalesYear = y => y === 2026 || (y != null && y > 2025);
 
-    // ---------- store aggregation ----------
     const storeMap = new Map();
     data.forEach(r => {
       const key = r.storeCode;
@@ -1727,7 +1807,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       else if (isSalesYear(r.year)) s.orders2026 += r.orders;
     });
 
-    // Targets: sum once per (store, area, year, month), aligned to the sales year
     const storeTargetKeys = new Set();
     data.forEach(r => {
       if (!r.year || !r.month) return;
@@ -1741,7 +1820,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     const storeAgg = [...storeMap.values()];
 
-    // ---------- area aggregation ----------
     const areaMap = new Map();
     data.forEach(r => {
       if (!areaMap.has(r.area)) areaMap.set(r.area, {
@@ -1764,7 +1842,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     const areaAgg = [...areaMap.values()];
 
-    // ---------- monthly aggregation (per year + target) ----------
     const monthMap = new Map();
     data.forEach(r => {
       if (!r.year || !r.month) return;
@@ -1776,7 +1853,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       });
       monthMap.get(key).net += r.net;
     });
-    // monthly targets
     const monthTargetKeys = new Set();
     data.forEach(r => {
       if (!r.year || !r.month) return;
@@ -1790,9 +1866,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     const monthAgg = [...monthMap.values()].sort((a,b)=>a.key.localeCompare(b.key));
 
-    // Split monthly into aligned label buckets so 2025 & 2026 sit side-by-side by month
-    // Build a union of month numbers present, labelled by month name; keep per-year values.
-    const monthBuckets = new Map(); // 'MM' -> { label, 2025, 2026, target }
+    const monthBuckets = new Map();
     monthAgg.forEach(m => {
       const mm = String(m.month).padStart(2,'0');
       if (!monthBuckets.has(mm)) monthBuckets.set(mm, {
@@ -1805,7 +1879,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     const monthSeries = [...monthBuckets.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([,v])=>v);
 
-    // ---------- 1. Top Stores: 2025 / 2026 / Target ----------
     const topStores = [...storeAgg]
       .sort((a,b) => (b.net2026 + b.net2025) - (a.net2026 + a.net2025))
       .slice(0, 12);
@@ -1847,7 +1920,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }
     });
 
-    // ---------- 2. Area Manager: 2025 / 2026 / Target ----------
     const areasSorted = [...areaAgg].sort((a,b) => (b.net2026 + b.net2025) - (a.net2026 + a.net2025));
     const ctx2 = $('areaChart').getContext('2d');
     if (areaChartInstance) areaChartInstance.destroy();
@@ -1886,7 +1958,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }
     });
 
-    // ---------- 3. Store Target Achievement (2025 / 2026 / Target, ranked by 2026 ach) ----------
     const rankedStores = [...storeAgg]
       .map(s => ({ ...s, ach: s.target > 0 ? s.net2026 / s.target : null }))
       .sort((a,b) => {
@@ -1933,7 +2004,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }
     });
 
-    // ---------- 4. Monthly Trend: 2025 / 2026 / Target ----------
     const ctx4 = $('monthlyTrendChart').getContext('2d');
     if (monthlyTrendChartInstance) monthlyTrendChartInstance.destroy();
     monthlyTrendChartInstance = new Chart(ctx4, {
@@ -1993,7 +2063,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }
     });
 
-    // ---------- local helper: signed % ----------
     function signedPct(cur, base){
       if (!isFinite(cur) || !isFinite(base) || base === 0) return '—';
       const d = ((cur / base) - 1) * 100;
@@ -2072,7 +2141,10 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       prevMonthMap.set(key, cur);
     });
 
-    const rows = [...groupMap.values()].sort((a,b)=>b.net2026 - a.net2026);
+    let rows = [...groupMap.values()].sort((a,b)=>b.net2026 - a.net2026);
+    if (lflOnly) {
+      rows = rows.filter(g => g.net2025 > 0);
+    }
 
     const st = {
       target:0,
@@ -2080,6 +2152,10 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       net2026:0, orders2026:0,
       prevNet:0, prevOrders:0, prevActiveDays:0
     };
+
+    const activeDays2025Set = new Set();
+    const activeDays2026Set = new Set();
+    const activeDaysPrevSet = new Set();
 
     let html = '';
     rows.forEach(g=>{
@@ -2142,6 +2218,17 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         displayPrevAt = prevAt;
       }
 
+      data.forEach(r => {
+        if (r.storeCode === g.storeCode && r.area === g.area && r.month === g.month) {
+          if (r.net > 0) {
+            const dk = `${r.year}-${r.month}-${r.day}`;
+            if (r.year === 2025) activeDays2025Set.add(dk);
+            if (r.year === 2026) activeDays2026Set.add(dk);
+            if (r.year === ctx.prevYear && r.month === ctx.prevMonth) activeDaysPrevSet.add(dk);
+          }
+        }
+      });
+
       let cellClass = '';
       if (g.net2025 > 0 || g.net2026 > 0) {
         cellClass = g.net2026 >= g.net2025 ? 'cell-positive' : 'cell-negative';
@@ -2152,25 +2239,34 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       const momFmt = fmtSignedPct(p.net > 0 ? (g.net2026 / p.net) : NaN);
 
       const targetTitle = g.fullMonthTarget > 0
-        ? `Full-month target: ${fmtCur(g.fullMonthTarget)} • ${g.selectedDays}/${g.availableDays} days selected`
+        ? `Full-month target: ${fmtCur(g.fullMonthTarget)} • ${g.selectedDays}/${g.availableDays} active days`
         : '';
       const prevMonthTitle = `Prev month (${prevMonthFull}) • ${p.activeDays} active day(s)`;
-      const storeTitle = `${g.storeCode} - ${g.store}`;
+      
+      // FIX: Avoid duplicate code if the store name already contains the code
+      let storeNameDisplay = g.store;
+      if (!storeNameDisplay.startsWith(g.storeCode)) {
+        storeNameDisplay = `${g.storeCode} - ${g.store}`;
+      }
+      const storeTitle = `Target: ${g.target > 0 ? fmtCur(displayTarget) : '—'} | ${storeNameDisplay}`;
 
       html += `<tr>
-        <td class="left-cell" title="${escapeAttr(storeTitle)}"><strong>${escapeHtml(g.storeCode)}</strong></td>
+        <td class="left-cell col-store" title="${escapeAttr(storeTitle)}"><strong>${escapeHtml(storeNameDisplay)}</strong></td>
         <td class="left-cell col-manager" title="${escapeAttr(g.area)}">${escapeHtml(g.area)}</td>
         <td>${g.monthLabel || '—'}</td>
-        <td title="${escapeAttr(targetTitle)}">${g.target > 0 ? fmtCur(displayTarget) : '—'}</td>
-
+        <td>${g.target > 0 ? fmtCur(displayTarget) : '—'}</td>
+        
+        <td class="cell-2025">${g.days2025 || 0}</td>
         <td class="cell-2025">${fmtCur(displayNet2025)}</td>
         <td class="cell-2025">${fmtNum(displayOrders2025)}</td>
         <td class="cell-2025">${fmtAT(displayAt2025)}</td>
 
+        <td class="cell-prev">${p.activeDays || 0}</td>
         <td class="cell-prev" title="${escapeAttr(prevMonthTitle)}">${fmtCur(displayPrevNet)}</td>
         <td class="cell-prev">${fmtNum(displayPrevOrders)}</td>
         <td class="cell-prev">${fmtAT(displayPrevAt)}</td>
 
+        <td class="cell-2026 ${cellClass}">${g.days2026 || 0}</td>
         <td class="cell-2026 ${cellClass}">${fmtCur(displayNet2026)}</td>
         <td class="cell-2026 ${cellClass}">${fmtNum(displayOrders2026)}</td>
         <td class="cell-2026 ${cellClass}">${fmtAT(displayAt2026)}</td>
@@ -2195,27 +2291,41 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         stCellClass = st.net2026 >= st.net2025 ? 'cell-positive' : 'cell-negative';
       }
 
+      let stDisplayNet2025 = st.net2025;
+      let stDisplayOrders2025 = st.orders2025;
+      let stDisplayNet2026 = st.net2026;
+      let stDisplayOrders2026 = st.orders2026;
       let stDisplayPrevNet = st.prevNet;
       let stDisplayPrevOrders = st.prevOrders;
+
       if (adsMode) {
-        const denom = st.prevActiveDays || 1;
-        stDisplayPrevNet = st.prevNet / denom;
-        stDisplayPrevOrders = st.prevOrders / denom;
+        const d25 = activeDays2025Set.size || 1;
+        const d26 = activeDays2026Set.size || 1;
+        const dp  = activeDaysPrevSet.size || 1;
+        stDisplayNet2025 = st.net2025 / d25;
+        stDisplayOrders2025 = st.orders2025 / d25;
+        stDisplayNet2026 = st.net2026 / d26;
+        stDisplayOrders2026 = st.orders2026 / d26;
+        stDisplayPrevNet = st.prevNet / dp;
+        stDisplayPrevOrders = st.prevOrders / dp;
       }
 
       html += `<tr class="subtotal-row">
         <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
 
-        <td class="cell-2025">${fmtCur(st.net2025)}</td>
-        <td class="cell-2025">${fmtNum(st.orders2025)}</td>
+        <td class="cell-2025">${activeDays2025Set.size || 0}</td>
+        <td class="cell-2025">${fmtCur(stDisplayNet2025)}</td>
+        <td class="cell-2025">${fmtNum(stDisplayOrders2025)}</td>
         <td class="cell-2025">${fmtAT(stAt2025)}</td>
 
+        <td class="cell-prev">${activeDaysPrevSet.size || 0}</td>
         <td class="cell-prev">${fmtCur(stDisplayPrevNet)}</td>
         <td class="cell-prev">${fmtNum(stDisplayPrevOrders)}</td>
         <td class="cell-prev">${fmtAT(stPrevAt)}</td>
 
-        <td class="cell-2026 ${stCellClass}">${fmtCur(st.net2026)}</td>
-        <td class="cell-2026 ${stCellClass}">${fmtNum(st.orders2026)}</td>
+        <td class="cell-2026 ${stCellClass}">${activeDays2026Set.size || 0}</td>
+        <td class="cell-2026 ${stCellClass}">${fmtCur(stDisplayNet2026)}</td>
+        <td class="cell-2026 ${stCellClass}">${fmtNum(stDisplayOrders2026)}</td>
         <td class="cell-2026 ${stCellClass}">${fmtAT(stAt2026)}</td>
 
         <td class="cell-ratios ${stLflFmt.cls}">${stLflFmt.text}</td>
@@ -2224,11 +2334,10 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       </tr>`;
     }
 
-    if (!rows.length) html = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#94a3b8;">No data matches the selected filters.</td></tr>';
+    if (!rows.length) html = '<tr><td colspan="19" style="text-align:center;padding:30px;color:#94a3b8;">No data matches the selected filters.</td></tr>';
     tableBody.innerHTML = html;
   }
 
-  // Initial empty state — will be replaced by the restore if a saved file exists
   emptyState.style.display = 'block';
 })();
 </script>

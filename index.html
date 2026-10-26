@@ -1476,15 +1476,20 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         mom == null ? '' : oneDecOrBlank(mom)
       ]);
     });
+    let sumDays2025 = 0, count2025 = 0;
+    let sumDays2026 = 0, count2026 = 0;
+    let sumDaysPrev = 0, countPrev = 0;
 
-        let prevDaysSum = 0;
     rows.forEach(g => {
+      if (g.days2025 > 0) { sumDays2025 += g.days2025; count2025++; }
+      if (g.days2026 > 0) { sumDays2026 += g.days2026; count2026++; }
       const p = prevMonthMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 };
-      prevDaysSum += p.activeDays;
+      if (p.activeDays > 0) { sumDaysPrev += p.activeDays; countPrev++; }
     });
-    const avgDaysPrev = prevDaysSum / rows.length;
-    const avgDays2025 = rows.reduce((sum, g) => sum + (g.days2025 || 0), 0) / rows.length;
-    const avgDays2026 = rows.reduce((sum, g) => sum + (g.days2026 || 0), 0) / rows.length;
+
+    const avgDays2025 = count2025 > 0 ? sumDays2025 / count2025 : 0;
+    const avgDays2026 = count2026 > 0 ? sumDays2026 / count2026 : 0;
+    const avgDaysPrev = countPrev > 0 ? sumDaysPrev / countPrev : 0;
 
     const stAt2025 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
     const stAt2026 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
@@ -2277,16 +2282,21 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       </tr>`;
     });
         if (rows.length) {
-      // 1. Calculate averages for Days
-      const avgDays2025 = rows.reduce((sum, g) => sum + (g.days2025 || 0), 0) / rows.length;
-      const avgDays2026 = rows.reduce((sum, g) => sum + (g.days2026 || 0), 0) / rows.length;
-      
-      let prevDaysSum = 0;
+          // Calculate averages only for stores with > 0 days
+      let sumDays2025 = 0, count2025 = 0;
+      let sumDays2026 = 0, count2026 = 0;
+      let sumDaysPrev = 0, countPrev = 0;
+
       rows.forEach(g => {
+        if (g.days2025 > 0) { sumDays2025 += g.days2025; count2025++; }
+        if (g.days2026 > 0) { sumDays2026 += g.days2026; count2026++; }
         const p = prevMonthMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 };
-        prevDaysSum += p.activeDays;
+        if (p.activeDays > 0) { sumDaysPrev += p.activeDays; countPrev++; }
       });
-      const avgDaysPrev = prevDaysSum / rows.length;
+
+      const avgDays2025 = count2025 > 0 ? sumDays2025 / count2025 : 0;
+      const avgDays2026 = count2026 > 0 ? sumDays2026 / count2026 : 0;
+      const avgDaysPrev = countPrev > 0 ? sumDaysPrev / countPrev : 0;
 
       // 2. Calculate AT based on the raw sums
       const stAt2025 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;

@@ -1444,9 +1444,12 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         displayTarget = g.target;
       }
 
-      st.target += displayTarget; st.net2025 += displayNet2025; st.orders2025 += displayOrders2025;
-      st.net2026 += displayNet2026; st.orders2026 += displayOrders2026;
-
+      st.target += g.target; 
+      st.net2025 += g.net2025; 
+      st.orders2025 += g.orders2025;
+      st.net2026 += g.net2026; 
+      st.orders2026 += g.orders2026;
+      
       const prevKey = `${g.storeCode}||${g.area}`;
       const p = prevMonthMap.get(prevKey) || { net: 0, orders: 0, activeDays: 0 };
       st.prevNet += p.net; st.prevOrders += p.orders;
@@ -2202,12 +2205,11 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
 
         displayTarget = g.target;
       }
-
-      st.target += displayTarget;
-      st.net2025 += displayNet2025;
-      st.orders2025 += displayOrders2025;
-      st.net2026 += displayNet2026;
-      st.orders2026 += displayOrders2026;
+      st.target += g.target;
+      st.net2025 += g.net2025;
+      st.orders2025 += g.orders2025;
+      st.net2026 += g.net2026;
+      st.orders2026 += g.orders2026;
 
       const prevKey = `${g.storeCode}||${g.area}`;
       const p = prevMonthMap.get(prevKey) || { net: 0, orders: 0, activeDays: 0 };
@@ -2317,7 +2319,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         stDisplayNet2026 = st.net2026 / (totalDays2026 || 1);
         stDisplayOrders2026 = st.orders2026 / (totalDays2026 || 1);
         stDisplayPrevNet = st.prevNet / (totalDaysPrev || 1);
-        stDisplayPrevOrders = st.orders2025 / (totalDays2025 || 1); // using correct prev orders
+
         stDisplayPrevOrders = st.prevOrders / (totalDaysPrev || 1);
         stDisplayTarget = st.target / (totalDays2026 || 1);
       }

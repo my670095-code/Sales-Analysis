@@ -1477,23 +1477,18 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       ]);
     });
 
-    if (adsMode) {
-      filteredData.forEach(r => {
-        if (r.net > 0) {
-          const dk = `${r.year}-${r.month}-${r.day}`;
-          if (r.year === 2025) activeDays2025.add(dk);
-          if (r.year === 2026) activeDays2026.add(dk);
-          if (r.year === ctx.prevYear && r.month === ctx.prevMonth) activeDaysPrev.add(dk);
-        }
-      });
-    }
+        let prevDaysSum = 0;
+    rows.forEach(g => {
+      const p = prevMonthMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 };
+      prevDaysSum += p.activeDays;
+    });
+    const avgDaysPrev = prevDaysSum / rows.length;
+    const avgDays2025 = rows.reduce((sum, g) => sum + (g.days2025 || 0), 0) / rows.length;
+    const avgDays2026 = rows.reduce((sum, g) => sum + (g.days2026 || 0), 0) / rows.length;
 
     const stAt2025 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
     const stAt2026 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
     const stPrevAt = st.prevOrders > 0 ? st.prevNet / st.prevOrders : 0;
-    const stLfl = st.net2025 > 0 ? ((st.net2026 / st.net2025) - 1) * 100 : null;
-    const stTgt = st.target > 0 ? ((st.net2026 / st.target) - 1) * 100 : null;
-    const stMom = st.prevNet > 0 ? ((st.net2026 / st.prevNet) - 1) * 100 : null;
 
     let exportStNet2025 = st.net2025;
     let exportStNet2026 = st.net2026;
@@ -1501,24 +1496,27 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     let exportStOrders2025 = st.orders2025;
     let exportStOrders2026 = st.orders2026;
     let exportStPrevOrders = st.prevOrders;
+    let exportStTarget = st.target;
 
     if (adsMode) {
-      const d25 = activeDays2025.size || 1;
-      const d26 = activeDays2026.size || 1;
-      const dp  = activeDaysPrev.size || 1;
-      exportStNet2025 = st.net2025 / d25;
-      exportStOrders2025 = st.orders2025 / d25;
-      exportStNet2026 = st.net2026 / d26;
-      exportStOrders2026 = st.orders2026 / d26;
-      exportStPrevNet = st.prevNet / dp;
-      exportStPrevOrders = st.prevOrders / dp;
+      exportStNet2025 = st.net2025 / (avgDays2025 || 1);
+      exportStOrders2025 = st.orders2025 / (avgDays2025 || 1);
+      exportStNet2026 = st.net2026 / (avgDays2026 || 1);
+      exportStOrders2026 = st.orders2026 / (avgDays2026 || 1);
+      exportStPrevNet = st.prevNet / (avgDaysPrev || 1);
+      exportStPrevOrders = st.prevOrders / (avgDaysPrev || 1);
+      exportStTarget = st.target / (avgDays2026 || 1);
     }
 
+    const stLfl = exportStNet2025 > 0 ? ((exportStNet2026 / exportStNet2025) - 1) * 100 : null;
+    const stTgt = exportStTarget > 0 ? ((exportStNet2026 / exportStTarget) - 1) * 100 : null;
+    const stMom = exportStPrevNet > 0 ? ((exportStNet2026 / exportStPrevNet) - 1) * 100 : null;
+
     aoa.push([
-      'SUBTOTAL', `${rows.length} rows`, '', st.target > 0 ? roundOrBlank(st.target) : '',
-      activeDays2025.size || 0, roundOrBlank(exportStNet2025), roundOrBlank(exportStOrders2025), oneDecOrBlank(stAt2025),
-      activeDaysPrev.size || 0, roundOrBlank(exportStPrevNet), roundOrBlank(exportStPrevOrders), oneDecOrBlank(stPrevAt),
-      activeDays2026.size || 0, roundOrBlank(exportStNet2026), roundOrBlank(exportStOrders2026), oneDecOrBlank(stAt2026),
+      'SUBTOTAL', `${rows.length} rows`, '', st.target > 0 ? roundOrBlank(exportStTarget) : '',
+      Number.isFinite(avgDays2025) ? Math.round(avgDays2025) : 0, roundOrBlank(exportStNet2025), roundOrBlank(exportStOrders2025), oneDecOrBlank(stAt2025),
+      Number.isFinite(avgDaysPrev) ? Math.round(avgDaysPrev) : 0, roundOrBlank(exportStPrevNet), roundOrBlank(exportStPrevOrders), oneDecOrBlank(stPrevAt),
+      Number.isFinite(avgDays2026) ? Math.round(avgDays2026) : 0, roundOrBlank(exportStNet2026), roundOrBlank(exportStOrders2026), oneDecOrBlank(stAt2026),
       stLfl == null ? '' : oneDecOrBlank(stLfl),
       stTgt == null ? '' : oneDecOrBlank(stTgt),
       stMom == null ? '' : oneDecOrBlank(stMom)
@@ -2165,9 +2163,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       prevNet:0, prevOrders:0, prevActiveDays:0
     };
 
-    const activeDays2025Set = new Set();
-    const activeDays2026Set = new Set();
-    const activeDaysPrevSet = new Set();
 
     let html = '';
     rows.forEach(g=>{
@@ -2230,29 +2225,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         displayPrevAt = prevAt;
       }
 
-           rawData.forEach(r => {
-        if (r.storeCode === g.storeCode && r.area === g.area) {
-          if (r.net > 0) {
-            const dk = `${r.year}-${r.month}-${r.day}`;
-            // Check if this row passes the current filters (except month)
-            const selStores = [...FilterState.store.selected];
-            const selAreas  = [...FilterState.area.selected];
-            const totalStores = FilterState.store.options.length;
-            const totalAreas  = FilterState.area.options.length;
-            const dFrom = dayFrom.value ? parseInt(dayFrom.value) : null;
-            const dTo   = dayTo.value   ? parseInt(dayTo.value)   : null;
-
-            if (selStores.length && selStores.length !== totalStores && !selStores.includes(r.storeCode)) return;
-            if (selAreas.length  && selAreas.length  !== totalAreas  && !selAreas.includes(r.area)) return;
-            if (dFrom != null && r.day != null && r.day < dFrom) return;
-            if (dTo   != null && r.day != null && r.day > dTo) return;
-
-            if (r.year === 2025) activeDays2025Set.add(dk);
-            if (r.year === 2026) activeDays2026Set.add(dk);
-            if (r.year === ctx.prevYear && r.month === ctx.prevMonth) activeDaysPrevSet.add(dk);
-          }
-        }
-      });
 
       let cellClass = '';
       if (g.net2025 > 0 || g.net2026 > 0) {
@@ -2304,54 +2276,67 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         <td class="cell-ratios ${momFmt.cls}">${momFmt.text}</td>
       </tr>`;
     });
+        if (rows.length) {
+      // 1. Calculate averages for Days
+      const avgDays2025 = rows.reduce((sum, g) => sum + (g.days2025 || 0), 0) / rows.length;
+      const avgDays2026 = rows.reduce((sum, g) => sum + (g.days2026 || 0), 0) / rows.length;
+      
+      let prevDaysSum = 0;
+      rows.forEach(g => {
+        const p = prevMonthMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 };
+        prevDaysSum += p.activeDays;
+      });
+      const avgDaysPrev = prevDaysSum / rows.length;
 
-    if (rows.length) {
+      // 2. Calculate AT based on the raw sums
       const stAt2025 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
       const stAt2026 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
       const stPrevAt = st.prevOrders > 0 ? st.prevNet / st.prevOrders : 0;
 
-      const stLflFmt = fmtSignedPct(st.net2025 > 0 ? (st.net2026 / st.net2025) : NaN);
-      const stTgtFmt = fmtSignedPct(st.target > 0 ? (st.net2026 / st.target) : NaN);
-      const stMomFmt = fmtSignedPct(st.prevNet > 0 ? (st.net2026 / st.prevNet) : NaN);
-
-      let stCellClass = '';
-      if (st.net2025 > 0 || st.net2026 > 0) {
-        stCellClass = st.net2026 >= st.net2025 ? 'cell-positive' : 'cell-negative';
-      }
-
+      // 3. Calculate ADS values for the subtotal (if adsMode is active)
       let stDisplayNet2025 = st.net2025;
       let stDisplayOrders2025 = st.orders2025;
       let stDisplayNet2026 = st.net2026;
       let stDisplayOrders2026 = st.orders2026;
       let stDisplayPrevNet = st.prevNet;
       let stDisplayPrevOrders = st.prevOrders;
+      let stDisplayTarget = st.target;
 
-            if (adsMode) {
-        const d25 = activeDays2025Set.size || 1;
-        const d26 = activeDays2026Set.size || 1;
-        const dp  = activeDaysPrevSet.size || 1;
-        stDisplayNet2025 = st.net2025 / d25;
-        stDisplayOrders2025 = st.orders2025 / d25;
-        stDisplayNet2026 = st.net2026 / d26;
-        stDisplayOrders2026 = st.orders2026 / d26;
-        stDisplayPrevNet = st.prevNet / dp;
-        stDisplayPrevOrders = st.prevOrders / dp;
+      if (adsMode) {
+        stDisplayNet2025 = st.net2025 / (avgDays2025 || 1);
+        stDisplayOrders2025 = st.orders2025 / (avgDays2025 || 1);
+        stDisplayNet2026 = st.net2026 / (avgDays2026 || 1);
+        stDisplayOrders2026 = st.orders2026 / (avgDays2026 || 1);
+        stDisplayPrevNet = st.prevNet / (avgDaysPrev || 1);
+        stDisplayPrevOrders = st.prevOrders / (avgDaysPrev || 1);
+        stDisplayTarget = st.target / (avgDays2026 || 1);
       }
 
+      // 4. Calculate Ratios using the ADS values
+      const stLflFmt = fmtSignedPct(stDisplayNet2025 > 0 ? (stDisplayNet2026 / stDisplayNet2025) : NaN);
+      const stTgtFmt = fmtSignedPct(stDisplayTarget > 0 ? (stDisplayNet2026 / stDisplayTarget) : NaN);
+      const stMomFmt = fmtSignedPct(stDisplayPrevNet > 0 ? (stDisplayNet2026 / stDisplayPrevNet) : NaN);
+
+      let stCellClass = '';
+      if (stDisplayNet2025 > 0 || stDisplayNet2026 > 0) {
+        stCellClass = stDisplayNet2026 >= stDisplayNet2025 ? 'cell-positive' : 'cell-negative';
+      }
+
+      // 5. Draw the Subtotal Row
       html += `<tr class="subtotal-row">
         <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
 
-        <td class="cell-2025">${activeDays2025Set.size || 0}</td>
+        <td class="cell-2025">${Number.isFinite(avgDays2025) ? Math.round(avgDays2025) : 0}</td>
         <td class="cell-2025">${fmtCur(stDisplayNet2025)}</td>
         <td class="cell-2025">${fmtNum(stDisplayOrders2025)}</td>
         <td class="cell-2025">${fmtAT(stAt2025)}</td>
 
-        <td class="cell-prev">${activeDaysPrevSet.size || 0}</td>
+        <td class="cell-prev">${Number.isFinite(avgDaysPrev) ? Math.round(avgDaysPrev) : 0}</td>
         <td class="cell-prev">${fmtCur(stDisplayPrevNet)}</td>
         <td class="cell-prev">${fmtNum(stDisplayPrevOrders)}</td>
         <td class="cell-prev">${fmtAT(stPrevAt)}</td>
 
-        <td class="cell-2026 ${stCellClass}">${activeDays2026Set.size || 0}</td>
+        <td class="cell-2026 ${stCellClass}">${Number.isFinite(avgDays2026) ? Math.round(avgDays2026) : 0}</td>
         <td class="cell-2026 ${stCellClass}">${fmtCur(stDisplayNet2026)}</td>
         <td class="cell-2026 ${stCellClass}">${fmtNum(stDisplayOrders2026)}</td>
         <td class="cell-2026 ${stCellClass}">${fmtAT(stAt2026)}</td>

@@ -951,21 +951,18 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     if (fullMonth <= 0) return { target: 0, fullMonth: 0, availableDays: 0, selectedDays: 0 };
 
     // --- FIXED LOGIC: Use store's actual active days instead of calendar days ---
-    const fullMonthRows = rows.filter(x => 
-      x.storeCode === storeCode && x.area === area && x.year === year && x.month === month && x.net > 0
-    );
-    const storeFullActiveDays = new Set(fullMonthRows.map(x => x.day)).size;
-    
+    // 1. Calculate total days in the month (e.g., 31 for October)
+    const calendarDaysInMonth = daysInMonth(year, month);
+
+    // 2. Count how many active days exist in the current selection (filtered data)
     const selectedRows = dataInWindow.filter(x => 
       x.storeCode === storeCode && x.area === area && x.year === year && x.month === month && x.net > 0
     );
     const selectedActiveDays = new Set(selectedRows.map(x => x.day)).size;
 
-    // Fallback to calendar days if the store has zero active days or data is missing
-    const baseDays = storeFullActiveDays > 0 ? storeFullActiveDays : daysInMonth(year, month);
-    
-    // Calculate ratio based on actual active days, capped at 1
-    const ratio = baseDays > 0 ? Math.min(selectedActiveDays / baseDays, 1) : 1;
+    // 3. Calculate the prorated ratio based on CALENDAR days
+    // If you selected 1-25, ratio is 25/31.
+    const ratio = calendarDaysInMonth > 0 ? Math.min(selectedActiveDays / calendarDaysInMonth, 1) : 1;
     
     let target = fullMonth * ratio;
 
@@ -976,7 +973,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     return { 
       target, 
       fullMonth, 
-      availableDays: baseDays, 
+      availableDays: calendarDaysInMonth, 
       selectedDays: selectedActiveDays 
     };
   }

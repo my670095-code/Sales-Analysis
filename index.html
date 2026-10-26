@@ -736,6 +736,10 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   const chartView = $('chartView'), tableView = $('tableView');
   const exportExcelBtn = $('exportExcel'), exportPdfBtn = $('exportPdf');
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    // Stores closed on Friday (5) and Saturday (6)
+  const WEEKEND_CLOSED_STORES = new Set([
+    '312', '251', '278', '247', '284', '214', '308', '231', '266', '194', '246', '156', '101', '294', '122', '72', '234', '242'
+  ]);
   
   const numOrBlank = v => (Number.isFinite(v) ? v : '');
   const roundOrBlank = v => (Number.isFinite(v) ? Math.round(v) : '');
@@ -952,17 +956,28 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
 
     // --- FIXED LOGIC: Use store's actual active days instead of calendar days ---
     // 1. Calculate total days in the month (e.g., 31 for October)
-    const calendarDaysInMonth = daysInMonth(year, month);
+    // 1. Determine if this store excludes Fri/Sat
+    const isClosedWeekend = WEEKEND_CLOSED_STORES.has(storeCode);
+    
+    // 2. Calculate total valid days in the month
+    let totalValidDaysInMonth = 0;
+    const daysInThisMonth = daysInMonth(year, month);
+    for (let d = 1; d <= daysInThisMonth; d++) {
+      const date = new Date(year, month - 1, d);
+      const dayOfWeek = date.getDay(); // 5 = Friday, 6 = Saturday
+      if (!isClosedWeekend || (dayOfWeek !== 5 && dayOfWeek !== 6)) {
+        totalValidDaysInMonth++;
+      }
+    }
 
-    // 2. Count how many active days exist in the current selection (filtered data)
+    // 3. Count how many active valid days exist in the current selection
     const selectedRows = dataInWindow.filter(x => 
       x.storeCode === storeCode && x.area === area && x.year === year && x.month === month && x.net > 0
     );
     const selectedActiveDays = new Set(selectedRows.map(x => x.day)).size;
 
-    // 3. Calculate the prorated ratio based on CALENDAR days
-    // If you selected 1-25, ratio is 25/31.
-    const ratio = calendarDaysInMonth > 0 ? Math.min(selectedActiveDays / calendarDaysInMonth, 1) : 1;
+    // 4. Calculate the prorated ratio
+    const ratio = totalValidDaysInMonth > 0 ? Math.min(selectedActiveDays / totalValidDaysInMonth, 1) : 1;
     
     let target = fullMonth * ratio;
 
@@ -973,7 +988,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     return { 
       target, 
       fullMonth, 
-      availableDays: calendarDaysInMonth, 
+      availableDays: totalValidDaysInMonth, 
       selectedDays: selectedActiveDays 
     };
   }
@@ -2242,9 +2257,12 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       
       // FIX: Avoid duplicate code if the store name already contains the code
       let storeNameDisplay = g.store;
-      if (!storeNameDisplay.startsWith(g.storeCode)) {
+      const prefixRegex = new RegExp(`^\\s*${g.storeCode}\\s*-\\s*`);
+      if (prefixRegex.test(storeNameDisplay)) {
+        storeNameDisplay = storeNameDisplay.replace(prefixRegex, `${g.storeCode} - `);
+      } else if (!storeNameDisplay.startsWith(g.storeCode)) {
         storeNameDisplay = `${g.storeCode} - ${g.store}`;
-      }
+      }      
       const storeTitle = `Target: ${g.target > 0 ? fmtCur(displayTarget) : '—'} | ${storeNameDisplay}`;
 
       html += `<tr>

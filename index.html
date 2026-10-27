@@ -229,7 +229,7 @@
       .kpi-grid{grid-template-columns:repeat(3,1fr)}
       .charts-grid{grid-template-columns:1fr}
     }
-    @media(max-width:900px){
+        @media(max-width:900px){
       .kpi-grid{grid-template-columns:repeat(2,1fr)}
       .header h1{font-size:1.3rem}
       .filter-bar{height:auto;min-height:0;flex-wrap:wrap;padding:12px}
@@ -240,6 +240,45 @@
       .table-header-bar{flex-direction:column;align-items:stretch}
       .table-scroll{overflow-x:auto}
     }
+
+    /* ===== Store Day Drill-Down Modal ===== */
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;backdrop-filter:blur(2px)}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:20px;max-width:1400px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.35);overflow:hidden;animation:modalIn .18s ease-out;margin:auto}
+    @keyframes modalIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #eef2f8;background:#f9fbfd;position:sticky;top:0;z-index:5}
+    .modal-head h3{font-size:1rem;font-weight:700;color:#0b1b33;display:flex;align-items:center;gap:9px}
+    .modal-head h3 i{color:#3b82f6}
+    .modal-head .sub{font-size:.75rem;color:#64748b;margin-top:3px;font-weight:500}
+    .modal-close{background:#fff;border:1.5px solid #dbe3ef;color:#475569;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+    .modal-close:hover{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+    .modal-body{padding:0;max-height:72vh;overflow:auto}
+    .modal-body table{width:100%;border-collapse:collapse;font-size:.74rem}
+    .modal-body thead{position:sticky;top:0;z-index:3}
+    .modal-body th{text-align:right;padding:8px 6px;color:#64748b;font-weight:700;font-size:.6rem;text-transform:uppercase;letter-spacing:.25px;border-bottom:1px solid #eef2f8;white-space:nowrap;background:#fff}
+    .modal-body th:first-child{text-align:left}
+    .modal-body th.group-2025{background:#eff6ff!important;color:#1d4ed8!important;text-align:center}
+    .modal-body th.group-prev{background:#fef9ee!important;color:#b45309!important;text-align:center}
+    .modal-body th.group-2026{background:#f0fdf4!important;color:#15803d!important;text-align:center}
+    .modal-body th.group-ratios{background:#faf5ff!important;color:#7e22ce!important;text-align:center}
+    .modal-body td{padding:7px 6px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-weight:500;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+    .modal-body td:first-child{text-align:left;font-weight:700}
+    .modal-body td.cell-2025{background:#f8fbff}
+    .modal-body td.cell-prev{background:#fffdf4}
+    .modal-body td.cell-2026{background:#f7fdf9}
+    .modal-body tr:hover td{background:#f8fafc}
+    .modal-body tr:hover td.cell-2025{background:#eef6ff}
+    .modal-body tr:hover td.cell-prev{background:#fef9e0}
+    .modal-body tr:hover td.cell-2026{background:#eefcf3}
+    .modal-body tr.subtotal-row td{background:#e8f0fe!important;font-weight:800!important;border-top:2px solid #3b82f6!important}
+    .modal-body .cell-positive{color:#15803d!important;font-weight:700}
+    .modal-body .cell-negative{color:#b91c1c!important;font-weight:700}
+    .modal-body .pct-up{color:#15803d!important;font-weight:700}
+    .modal-body .pct-down{color:#b91c1c!important;font-weight:700}
+    .modal-empty{padding:40px;text-align:center;color:#94a3b8;font-size:.85rem}
+    tr.store-clickable{cursor:pointer}
+    tr.store-clickable{user-select:none;-webkit-tap-highlight-color:transparent}
+    tr.store-clickable:hover td{background:#eef6ff!important}
   </style>
 </head>
 <body>
@@ -435,6 +474,47 @@
   </div>
 
   <div class="footer"><i class="fas fa-chart-simple"></i> Sales Dashboard · Upload Excel to explore store &amp; area performance</div>
+    <!-- Store Day Drill-Down Modal -->
+  <div class="modal-overlay" id="storeDayModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3><i class="fas fa-calendar-day"></i> <span id="modalStoreName">Store</span></h3>
+          <div class="sub" id="modalStoreSub">Day-wise breakdown</div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <table id="modalDayTable">
+          <thead>
+            <tr>
+              <th colspan="1" style="border-bottom:2px solid #eef2f8;">&nbsp;</th>
+              <th colspan="3" class="group-2025">2025</th>
+              <th colspan="3" class="group-prev" id="modalHeaderPrev">Prev Month</th>
+              <th colspan="3" class="group-2026">2026</th>
+              <th colspan="3" class="group-ratios">Ratios</th>
+            </tr>
+            <tr>
+              <th style="text-align:left;">Day</th>
+              <th class="group-2025">Sales</th>
+              <th class="group-2025">CC</th>
+              <th class="group-2025">AT</th>
+              <th class="group-prev">Sales</th>
+              <th class="group-prev">CC</th>
+              <th class="group-prev">AT</th>
+              <th class="group-2026">Sales</th>
+              <th class="group-2026">CC</th>
+              <th class="group-2026">AT</th>
+              <th class="group-ratios">LFL</th>
+              <th class="group-ratios">Tgt</th>
+              <th class="group-ratios">MoM</th>
+            </tr>
+          </thead>
+          <tbody id="modalDayBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2256,7 +2336,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       }      
       const storeTitle = `Target: ${g.target > 0 ? fmtCur(displayTarget) : '—'} | ${storeNameDisplay}`;
 
-      html += `<tr>
+            html += `<tr class="store-clickable" data-store-code="${escapeAttr(g.storeCode)}" data-store-area="${escapeAttr(g.area)}">
         <td class="left-cell col-store" title="${escapeAttr(storeTitle)}"><strong>${escapeHtml(storeNameDisplay)}</strong></td>
         <td class="left-cell col-manager" title="${escapeAttr(g.area)}">${escapeHtml(g.area)}</td>
         <td>${g.monthLabel || '—'}</td>
@@ -2359,12 +2439,179 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       </tr>`;
     }
 
-    if (!rows.length) html = '<tr><td colspan="19" style="text-align:center;padding:30px;color:#94a3b8;">No data matches the selected filters.</td></tr>';
+        if (!rows.length) html = '<tr><td colspan="19" style="text-align:center;padding:30px;color:#94a3b8;">No data matches the selected filters.</td></tr>';
     tableBody.innerHTML = html;
+
+    tableBody.querySelectorAll('tr.store-clickable').forEach(tr => {
+      tr.addEventListener('click', () => {
+        openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea);
+      });
+    });
   }
+  
+    // =====================================================
+  // STORE DAY DRILL-DOWN MODAL
+  // =====================================================
+  const storeDayModal   = $('storeDayModal');
+  const modalStoreName  = $('modalStoreName');
+  const modalStoreSub   = $('modalStoreSub');
+  const modalDayBody    = $('modalDayBody');
+  const modalHeaderPrev = $('modalHeaderPrev');
+  const modalCloseBtn   = $('modalCloseBtn');
+
+  function openStoreDayModal(storeCode, area){
+    const tMaps = window.__targetMaps || buildTargetMap(rawData);
+    const ctx = getMonthContext();
+    const prevMonthFull = `${MONTHS[ctx.prevMonth - 1] || ''} ${ctx.prevYear}`;
+    modalHeaderPrev.textContent = prevMonthFull;
+
+    const sample = rawData.find(r => r.storeCode === storeCode && r.area === area)
+                 || rawData.find(r => r.storeCode === storeCode);
+    if (!sample) return;
+
+    let storeName = sample.store;
+    const prefixRegex = new RegExp(`^\\s*${storeCode}\\s*-\\s*`);
+    if (prefixRegex.test(storeName)) {
+      storeName = storeName.replace(prefixRegex, `${storeCode} - `);
+    } else if (!storeName.startsWith(storeCode)) {
+      storeName = `${storeCode} - ${storeName}`;
+    }
+    modalStoreName.textContent = storeName;
+    modalStoreSub.textContent = `Manager: ${area} • Day-wise breakdown`;
+
+    const dayMap = new Map();
+    const ensure = d => {
+      if (!dayMap.has(d)) dayMap.set(d, {
+        d2025:0, o2025:0, dPrev:0, oPrev:0, d2026:0, o2026:0
+      });
+      return dayMap.get(d);
+    };
+
+    filteredData.forEach(r => {
+      if (r.storeCode !== storeCode) return;
+      if (area && r.area !== area) return;
+      if (r.day == null) return;
+      if (r.month !== ctx.curMonth) return;
+      if (r.year === 2025) {
+        const b = ensure(r.day); b.d2025 += r.net; b.o2025 += r.orders;
+      } else if (r.year === ctx.curYear) {
+        const b = ensure(r.day); b.d2026 += r.net; b.o2026 += r.orders;
+      }
+    });
+
+    rawData.forEach(r => {
+      if (r.storeCode !== storeCode) return;
+      if (area && r.area !== area) return;
+      if (r.year !== ctx.prevYear || r.month !== ctx.prevMonth) return;
+      if (r.day == null) return;
+      const dFrom = dayFrom.value ? parseInt(dayFrom.value) : null;
+const dTo   = dayTo.value   ? parseInt(dayTo.value)   : null;
+if (dFrom != null && r.day < dFrom) return;
+if (dTo   != null && r.day > dTo)   return;
+      const b = ensure(r.day);
+      b.dPrev += r.net; b.oPrev += r.orders;
+    });
+
+    const salesYear = window.__salesYear != null ? window.__salesYear : ctx.curYear;
+    const gInfo = computeGroupTarget(tMaps, filteredData, filteredData,
+                    storeCode, area, salesYear, ctx.curMonth, false);
+    const isClosedWeekend = WEEKEND_CLOSED_STORES.has(String(storeCode));
+    const daysThisMonth = daysInMonth(salesYear, ctx.curMonth);
+    let validDays = 0;
+    for (let d = 1; d <= daysThisMonth; d++){
+      const dt = new Date(salesYear, ctx.curMonth - 1, d);
+      const dow = dt.getDay();
+      if (!isClosedWeekend || (dow !== 5 && dow !== 6)) validDays++;
+    }
+    const perDayTarget = validDays > 0 ? gInfo.fullMonth / validDays : 0;
+
+    const allDays = [...dayMap.keys()].sort((a,b)=>a-b);
+    if (!allDays.length){
+      modalDayBody.innerHTML = '<tr><td colspan="13" class="modal-empty">No day data for this store.</td></tr>';
+      storeDayModal.classList.add('open');
+      return;
+    }
+    const minDay = allDays[0];
+    const maxDay = allDays[allDays.length - 1];
+
+    const tot = { d2025:0, o2025:0, dPrev:0, oPrev:0, d2026:0, o2026:0, target:0 };
+    let html = '';
+
+    for (let d = minDay; d <= maxDay; d++){
+      const b = dayMap.get(d) || { d2025:0, o2025:0, dPrev:0, oPrev:0, d2026:0, o2026:0 };
+      const at2025 = b.o2025 > 0 ? b.d2025 / b.o2025 : 0;
+      const atPrev = b.oPrev > 0 ? b.dPrev / b.oPrev : 0;
+      const at2026 = b.o2026 > 0 ? b.d2026 / b.o2026 : 0;
+            const tgt = perDayTarget;
+      tot.d2025 += b.d2025; tot.o2025 += b.o2025;
+      tot.dPrev += b.dPrev; tot.oPrev += b.oPrev;
+      tot.d2026 += b.d2026; tot.o2026 += b.o2026;
+
+      const lflFmt = fmtSignedPct(b.d2025 > 0 ? (b.d2026 / b.d2025) : NaN);
+      const tgtFmt = fmtSignedPct(tgt > 0 ? (b.d2026 / tgt) : NaN);
+      const momFmt = fmtSignedPct(b.dPrev > 0 ? (b.d2026 / b.dPrev) : NaN);
+      const cellClass = (b.d2025 > 0 || b.d2026 > 0)
+        ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
+
+      html += `<tr>
+        <td>Day ${d}</td>
+        <td class="cell-2025">${fmtCur(b.d2025)}</td>
+        <td class="cell-2025">${fmtNum(b.o2025)}</td>
+        <td class="cell-2025">${fmtAT(at2025)}</td>
+        <td class="cell-prev">${fmtCur(b.dPrev)}</td>
+        <td class="cell-prev">${fmtNum(b.oPrev)}</td>
+        <td class="cell-prev">${fmtAT(atPrev)}</td>
+        <td class="cell-2026 ${cellClass}">${fmtCur(b.d2026)}</td>
+        <td class="cell-2026 ${cellClass}">${fmtNum(b.o2026)}</td>
+        <td class="cell-2026 ${cellClass}">${fmtAT(at2026)}</td>
+        <td class="cell-ratios ${lflFmt.cls}">${lflFmt.text}</td>
+        <td class="cell-ratios ${tgtFmt.cls}">${tgtFmt.text}</td>
+        <td class="cell-ratios ${momFmt.cls}">${momFmt.text}</td>
+      </tr>`;
+    }
+    const stAt2025 = tot.o2025 > 0 ? tot.d2025 / tot.o2025 : 0;
+    const stAtPrev = tot.oPrev > 0 ? tot.dPrev / tot.oPrev : 0;
+    const stAt2026 = tot.o2026 > 0 ? tot.d2026 / tot.o2026 : 0;
+    const stLfl = fmtSignedPct(tot.d2025 > 0 ? (tot.d2026 / tot.d2025) : NaN);
+
+    // Use the exact prorated target that computeGroupTarget returns
+    const totalTarget = gInfo.target;
+    const stTgt = fmtSignedPct(totalTarget > 0 ? (tot.d2026 / totalTarget) : NaN);
+    const stMom = fmtSignedPct(tot.dPrev > 0 ? (tot.d2026 / tot.dPrev) : NaN);
+    const stClass = (tot.d2025 > 0 || tot.d2026 > 0)
+      ? (tot.d2026 >= tot.d2025 ? 'cell-positive' : 'cell-negative') : '';
+
+    html += `<tr class="subtotal-row">
+      <td>TOTAL</td>
+      <td class="cell-2025">${fmtCur(tot.d2025)}</td>
+      <td class="cell-2025">${fmtNum(tot.o2025)}</td>
+      <td class="cell-2025">${fmtAT(stAt2025)}</td>
+      <td class="cell-prev">${fmtCur(tot.dPrev)}</td>
+      <td class="cell-prev">${fmtNum(tot.oPrev)}</td>
+      <td class="cell-prev">${fmtAT(stAtPrev)}</td>
+      <td class="cell-2026 ${stClass}">${fmtCur(tot.d2026)}</td>
+      <td class="cell-2026 ${stClass}">${fmtNum(tot.o2026)}</td>
+      <td class="cell-2026 ${stClass}">${fmtAT(stAt2026)}</td>
+      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
+      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
+      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+    </tr>`;
+
+    modalDayBody.innerHTML = html;
+    storeDayModal.classList.add('open');
+  }
+
+  modalCloseBtn.addEventListener('click', () => storeDayModal.classList.remove('open'));
+  storeDayModal.addEventListener('click', e => {
+    if (e.target === storeDayModal) storeDayModal.classList.remove('open');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') storeDayModal.classList.remove('open');
+  });
 
   emptyState.style.display = 'block';
 })();
+
 </script>
 </body>
 </html>

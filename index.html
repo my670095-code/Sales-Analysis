@@ -276,94 +276,9 @@
     .modal-body .pct-up{color:#15803d!important;font-weight:700}
     .modal-body .pct-down{color:#b91c1c!important;font-weight:700}
     .modal-empty{padding:40px;text-align:center;color:#94a3b8;font-size:.85rem}
-        tr.store-clickable{cursor:pointer}
+    tr.store-clickable{cursor:pointer}
     tr.store-clickable{user-select:none;-webkit-tap-highlight-color:transparent}
     tr.store-clickable:hover td{background:#eef6ff!important}
-
-    /* ===== Month-on-Month Comparison Module ===== */
-    .compare-module{
-      background:#fff;border-radius:22px;padding:18px 20px 12px;
-      box-shadow:0 8px 25px rgba(0,0,0,.02);border:1px solid #eef2f8;
-      margin-bottom:16px;
-    }
-    .compare-head{
-      display:flex;justify-content:space-between;align-items:center;
-      margin-bottom:12px;flex-wrap:wrap;gap:8px;
-    }
-    .compare-head h3{
-      font-size:.95rem;font-weight:700;color:#0b1b33;
-      display:flex;align-items:center;gap:8px;
-    }
-    .compare-head h3 i{color:#3b82f6}
-    .compare-badge{
-      background:#eff6ff;color:#1d4ed8;font-size:.68rem;font-weight:700;
-      padding:3px 10px;border-radius:20px;letter-spacing:.3px;
-    }
-    .compare-sub{font-size:.75rem;color:#64748b;font-weight:500}
-
-    .compare-scroll{overflow-x:auto;border-radius:12px;border:1px solid #eef2f8}
-    .compare-table{
-      width:100%;border-collapse:collapse;font-size:.82rem;
-      min-width:680px;
-    }
-    .compare-table thead th{
-      background:#f8fafc;color:#475569;text-align:right;
-      font-size:.62rem;font-weight:700;text-transform:uppercase;
-      letter-spacing:.35px;padding:9px 12px;
-      border-bottom:2px solid #e8eef8;
-      white-space:nowrap;
-    }
-    .compare-table thead th.cmp-month{text-align:left;width:90px}
-    .compare-table thead th.cmp-metric{text-align:left;width:110px}
-    .compare-table thead th.cmp-y2025{color:#b45309;width:140px}
-    .compare-table thead th.cmp-y2026{color:#15803d;width:140px}
-    .compare-table thead th.cmp-delta{width:120px}
-
-    .compare-table tbody td{
-      padding:7px 12px;border-bottom:1px solid #f1f5f9;
-      text-align:right;white-space:nowrap;
-      font-variant-numeric:tabular-nums;
-      color:#1e293b;font-weight:600;
-    }
-    .compare-table tbody td.cmp-month{
-      text-align:left;font-weight:800;color:#0b1b33;
-      font-size:.84rem;letter-spacing:.1px;
-    }
-    .compare-table tbody td.cmp-metric{
-      text-align:left;font-weight:600;color:#64748b;font-size:.78rem;
-    }
-    .compare-table tbody td.cmp-y2025{background:#fffdf4;color:#78350f}
-    .compare-table tbody td.cmp-y2026{background:#f7fdf9;color:#14532d}
-    .compare-table tbody td.cmp-delta{font-weight:800}
-    .compare-table tbody td.cmp-delta.up{color:#15803d}
-    .compare-table tbody td.cmp-delta.down{color:#b91c1c}
-    .compare-table tbody td.cmp-delta.neutral{color:#94a3b8;font-weight:600}
-
-    .compare-table tbody tr.cmp-month-first td{border-top:2px solid #e8eef8}
-    .compare-table tbody tr:first-child td{border-top:none}
-
-    .compare-table tbody tr.cmp-total-row td{
-      background:#e8f0fe !important;
-      color:#0b1b33 !important;
-      font-weight:800 !important;
-      border-top:2px solid #3b82f6 !important;
-      border-bottom:1px solid #bfdbfe !important;
-      padding-top:10px;padding-bottom:10px;
-    }
-    .compare-table tbody tr.cmp-total-row td.cmp-y2025{
-      background:#fde68a !important;color:#78350f !important;
-    }
-    .compare-table tbody tr.cmp-total-row td.cmp-y2026{
-      background:#dcfce7 !important;color:#14532d !important;
-    }
-    .compare-table tbody tr.cmp-total-row td.cmp-month{
-      color:#1d4ed8 !important;text-transform:uppercase;
-      font-size:.72rem;letter-spacing:.5px;
-    }
-    .cmp-empty{
-      padding:30px;text-align:center;color:#94a3b8;
-      font-size:.85rem;font-style:italic;
-    }
   </style>
 </head>
 <body>
@@ -480,28 +395,6 @@
       <div class="kpi-meta" id="kpiMomSalesMeta">—</div>
     </div>
   </div>
-    <!-- NEW: Month-on-Month Comparison Module -->
-  <div class="compare-module" id="compareModule" style="display:none;">
-    <div class="compare-head">
-      <h3><i class="fas fa-calendar-alt"></i> Month-on-Month Comparison <span class="compare-badge">2025 vs 2026</span></h3>
-      <div class="compare-sub" id="compareSubLabel">All data</div>
-    </div>
-    <div class="compare-scroll">
-      <table class="compare-table">
-        <thead>
-          <tr>
-            <th class="cmp-month">Month</th>
-            <th class="cmp-metric">Metric</th>
-            <th class="cmp-y2025">2025</th>
-            <th class="cmp-y2026">2026</th>
-            <th class="cmp-delta">Δ Change</th>
-          </tr>
-        </thead>
-        <tbody id="compareBody"></tbody>
-      </table>
-    </div>
-  </div>
-
 
   <div class="view-section active" id="chartView">
     <div class="charts-grid" id="chartsPanel" style="display:none;">
@@ -1301,10 +1194,10 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       rawData = rows;
       rowCountBadge.textContent = `${rows.length} rows${skipped ? ` (${skipped} skipped)` : ''}`;
       loadingState.style.display = 'none';
+
       populateFilters(rows);
       filterBar.classList.add('show');
       kpiPanel.style.display = 'grid';
-      $('compareModule').style.display = 'block';
       chartsPanel.style.display = 'grid';
       tablePanel.style.display = 'block';
       emptyState.style.display = 'none';
@@ -1318,15 +1211,13 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
         showSavedIndicator(displayName, buffer.byteLength, (meta && meta.savedAt) || Date.now());
       }
 
-        } catch (err){
+    } catch (err){
       console.error(err);
       loadingState.style.display = 'none';
       emptyState.style.display = 'block';
       errorBox.style.display = 'block';
       errorText.textContent = (err && err.message) ? err.message : String(err);
       rowCountBadge.textContent = 'Error';
-      const cmpEl = $('compareModule');
-      if (cmpEl) cmpEl.style.display = 'none';
     }
   }
 
@@ -1479,8 +1370,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       return true;
     });
 
-        updateKPIs(filteredData);
-    updateCompareModule(filteredData);
+    updateKPIs(filteredData);
     if (currentView === 'charts') renderCharts(filteredData);
     renderTable(filteredData);
   }
@@ -1520,19 +1410,17 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     applyFiltersAndRender();
   });
 
-    adsToggle.addEventListener('click', () => {
+  adsToggle.addEventListener('click', () => {
     adsMode = !adsMode;
     adsToggle.classList.toggle('active', adsMode);
     updateKPIs(filteredData);
-    updateCompareModule(filteredData);
     renderTable(filteredData);
   });
 
-   lflToggle.addEventListener('click', () => {
+  lflToggle.addEventListener('click', () => {
     lflOnly = !lflOnly;
     lflToggle.classList.toggle('active', lflOnly);
     updateKPIs(filteredData);
-    updateCompareModule(filteredData);
     renderTable(filteredData);
   });
 
@@ -1995,186 +1883,6 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       prevNet > 0
         ? `${prevLabel}${adsSuffix}: ${fmtCur(prevNet)}  •  ${curLabel}${adsSuffix}: ${fmtCur(curNet)}`
         : 'No previous-month data');
-  }
-    // =====================================================
-  // Month-on-Month Comparison Module (2025 vs 2026, per month)
-  // =====================================================
-  function updateCompareModule(data){
-    const compareModule = $('compareModule');
-    const compareSubLabel = $('compareSubLabel');
-    const compareBody = $('compareBody');
-    if (!compareModule || !compareBody) return;
-
-    // Respect LFL Only
-    let salesData = data;
-    if (lflOnly) {
-      const storesWith2025Sales = new Set(
-        data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode)
-      );
-      salesData = data.filter(r => storesWith2025Sales.has(r.storeCode));
-    }
-
-    // Build per-month buckets
-    const monthBuckets = new Map(); // month -> { net25, cc25, d25, net26, cc26, d26 }
-    salesData.forEach(r => {
-      if (!r.month) return;
-      if (!monthBuckets.has(r.month)) {
-        monthBuckets.set(r.month, {
-          net25: 0, cc25: 0, d25: new Set(),
-          net26: 0, cc26: 0, d26: new Set()
-        });
-      }
-      const b = monthBuckets.get(r.month);
-      if (r.year === 2025) {
-        b.net25 += r.net;
-        b.cc25  += r.orders;
-        if (r.net > 0 && r.day != null) b.d25.add(r.day);
-      } else if (r.year === 2026) {
-        b.net26 += r.net;
-        b.cc26  += r.orders;
-        if (r.net > 0 && r.day != null) b.d26.add(r.day);
-      }
-    });
-
-    const monthsSorted = [...monthBuckets.keys()].sort((a,b) => a - b);
-
-    if (!monthsSorted.length) {
-      compareBody.innerHTML = '<tr><td colspan="5" class="cmp-empty">No data for the current filters.</td></tr>';
-      compareModule.style.display = 'block';
-      return;
-    }
-
-    // Subtitle showing current filter state
-    const selMonths = [...FilterState.month.selected].map(Number);
-    const totalMonths = FilterState.month.options.length;
-    const selStores = FilterState.store.selected.size;
-    const totalStores = FilterState.store.options.length;
-    const selAreas = FilterState.area.selected.size;
-    const totalAreas = FilterState.area.options.length;
-
-    const parts = [];
-    if (selMonths.length && selMonths.length !== totalMonths) {
-      parts.push(selMonths.map(m => MONTHS[m-1]).join(', '));
-    } else {
-      parts.push(`${monthsSorted.length} month${monthsSorted.length>1?'s':''}`);
-    }
-    if (selAreas > 0 && selAreas < totalAreas) parts.push(`${selAreas} manager${selAreas>1?'s':''}`);
-    if (selStores > 0 && selStores < totalStores) parts.push(`${selStores} store${selStores>1?'s':''}`);
-    parts.push(`Day ${dayFrom.value || '1'}–${dayTo.value || '31'}`);
-    if (adsMode) parts.push('ADS mode');
-    if (lflOnly) parts.push('LFL only');
-    compareSubLabel.textContent = parts.join(' • ');
-
-    const fmtDelta = (cur, base) => {
-      if (!isFinite(cur) || !isFinite(base) || base <= 0)
-        return { text: '—', cls: 'neutral' };
-      const pct = ((cur / base) - 1) * 100;
-      const sign = pct >= 0 ? '+' : '';
-      const arrow = pct >= 0 ? '▲' : '▼';
-      return { text: `${arrow} ${sign}${pct.toFixed(1)}%`, cls: pct >= 0 ? 'up' : 'down' };
-    };
-
-    let html = '';
-
-    monthsSorted.forEach((m, idx) => {
-      const b = monthBuckets.get(m);
-      const active25 = b.d25.size || 1;
-      const active26 = b.d26.size || 1;
-
-      const net25 = adsMode ? b.net25 / active25 : b.net25;
-      const net26 = adsMode ? b.net26 / active26 : b.net26;
-      const cc25  = adsMode ? b.cc25  / active25 : b.cc25;
-      const cc26  = adsMode ? b.cc26  / active26 : b.cc26;
-      const at25  = b.cc25 > 0 ? b.net25 / b.cc25 : 0;
-      const at26  = b.cc26 > 0 ? b.net26 / b.cc26 : 0;
-
-      const dSales = fmtDelta(net26, net25);
-      const dCc    = fmtDelta(cc26, cc25);
-      const dAt    = fmtDelta(at26, at25);
-
-      const firstCls = idx > 0 ? 'cmp-month-first' : '';
-
-      html += `
-        <tr class="${firstCls}">
-          <td class="cmp-month" rowspan="3">${MONTHS[m-1]}</td>
-          <td class="cmp-metric">Sales</td>
-          <td class="cmp-y2025">${fmtCur(net25)}</td>
-          <td class="cmp-y2026">${fmtCur(net26)}</td>
-          <td class="cmp-delta ${dSales.cls}">${dSales.text}</td>
-        </tr>
-        <tr>
-          <td class="cmp-metric">CC</td>
-          <td class="cmp-y2025">${fmtNum(cc25)}</td>
-          <td class="cmp-y2026">${fmtNum(cc26)}</td>
-          <td class="cmp-delta ${dCc.cls}">${dCc.text}</td>
-        </tr>
-        <tr>
-          <td class="cmp-metric">AT</td>
-          <td class="cmp-y2025">${fmtAT(at25)}</td>
-          <td class="cmp-y2026">${fmtAT(at26)}</td>
-          <td class="cmp-delta ${dAt.cls}">${dAt.text}</td>
-        </tr>
-      `;
-    });
-
-    // TOTAL row
-    let rawNet25 = 0, rawCc25 = 0, rawNet26 = 0, rawCc26 = 0;
-    salesData.forEach(r => {
-      if (r.year === 2025) { rawNet25 += r.net; rawCc25 += r.orders; }
-      else if (r.year === 2026) { rawNet26 += r.net; rawCc26 += r.orders; }
-    });
-    const totalAt25 = rawCc25 > 0 ? rawNet25 / rawCc25 : 0;
-    const totalAt26 = rawCc26 > 0 ? rawNet26 / rawCc26 : 0;
-
-    let totalNet25, totalCc25, totalNet26, totalCc26;
-    if (adsMode) {
-            const allDays25 = new Set();
-      const allDays26 = new Set();
-      salesData.forEach(r => {
-        if (r.net > 0 && r.year && r.month && r.day) {
-          if (r.year === 2025) allDays25.add(`${r.year}-${r.month}-${r.day}`);
-          else if (r.year === 2026) allDays26.add(`${r.year}-${r.month}-${r.day}`);
-        }
-      });
-      const act25 = allDays25.size || 1;
-      const act26 = allDays26.size || 1;
-      totalNet25 = rawNet25 / act25;
-      totalCc25  = rawCc25  / act25;
-      totalNet26 = rawNet26 / act26;
-      totalCc26  = rawCc26  / act26;
-    } else {
-      totalNet25 = rawNet25; totalCc25 = rawCc25;
-      totalNet26 = rawNet26; totalCc26 = rawCc26;
-    }
-
-    const dTotSales = fmtDelta(totalNet26, totalNet25);
-    const dTotCc    = fmtDelta(totalCc26, totalCc25);
-    const dTotAt    = fmtDelta(totalAt26, totalAt25);
-
-    html += `
-      <tr class="cmp-total-row">
-        <td class="cmp-month" rowspan="3">TOTAL</td>
-        <td class="cmp-metric">Sales</td>
-        <td class="cmp-y2025">${fmtCur(totalNet25)}</td>
-        <td class="cmp-y2026">${fmtCur(totalNet26)}</td>
-        <td class="cmp-delta ${dTotSales.cls}">${dTotSales.text}</td>
-      </tr>
-      <tr class="cmp-total-row">
-        <td class="cmp-metric">CC</td>
-        <td class="cmp-y2025">${fmtNum(totalCc25)}</td>
-        <td class="cmp-y2026">${fmtNum(totalCc26)}</td>
-        <td class="cmp-delta ${dTotCc.cls}">${dTotCc.text}</td>
-      </tr>
-      <tr class="cmp-total-row">
-        <td class="cmp-metric">AT</td>
-        <td class="cmp-y2025">${fmtAT(totalAt25)}</td>
-        <td class="cmp-y2026">${fmtAT(totalAt26)}</td>
-        <td class="cmp-delta ${dTotAt.cls}">${dTotAt.text}</td>
-      </tr>
-    `;
-
-    compareBody.innerHTML = html;
-    compareModule.style.display = 'block';
   }
 
   function renderCharts(data){

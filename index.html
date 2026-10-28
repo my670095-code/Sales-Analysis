@@ -482,12 +482,16 @@
     <!-- Store Day Drill-Down Modal -->
   <div class="modal-overlay" id="storeDayModal">
     <div class="modal-box">
-      <div class="modal-head">
+            <div class="modal-head">
         <div>
           <h3><i class="fas fa-calendar-day"></i> <span id="modalStoreName">Store</span></h3>
           <div class="sub" id="modalStoreSub">Day-wise breakdown</div>
         </div>
-        <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="export-btn excel" id="modalExportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
+          <button class="export-btn pdf" id="modalExportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
+          <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
+        </div>
       </div>
       <div class="modal-body">
         <table id="modalDayTable">
@@ -2644,6 +2648,133 @@ if (dTo   != null && r.day > dTo)   return;
     modalDayBody.innerHTML = html;
     storeDayModal.classList.add('open');
   }
+    // =====================================================
+  // MODAL EXPORTS (EXCEL & PDF)
+  // =====================================================
+  
+  // Helper to extract current modal data for export
+  function getModalExportData() {
+    const table = document.getElementById('modalDayTable');
+    const headers = [];
+    const rows = [];
+    
+    // Get Headers
+    const headerRows = table.querySelectorAll('thead tr');
+    headerRows.forEach(tr => {
+      const rowData = [];
+      tr.querySelectorAll('th').forEach(th => {
+        const text = th.innerText.trim();
+        // Handle colspan (skip empty ones)
+        const colSpan = parseInt(th.getAttribute('colspan') || 1);
+        rowData.push(text);
+        for (let i = 1; i < colSpan; i++) rowData.push(''); 
+      });
+      headers.push(rowData);
+    });
+
+    // Get Body Rows
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const rowData = [];
+      tr.querySelectorAll('td').forEach(td => {
+        // Remove commas from numbers so Excel treats them as numbers
+        const text = td.innerText.trim().replace(/,/g, '');
+        rowData.push(text === '—' ? '' : text);
+      });
+      rows.push(rowData);
+    });
+
+    return { headers, rows };
+  }
+
+  // Modal Export Excel
+  document.getElementById('modalExportExcel').addEventListener('click', () => {
+    const { headers, rows } = getModalExportData();
+    const aoa = [...headers, ...rows];
+    
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Store Day Breakdown');
+    
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    
+    const storeName = document.getElementById('modalStoreName').textContent.replace(/[^a-z0-9]/gi, '_');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Store_Day_Breakdown_${storeName}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  // Modal Export PDF
+  document.getElementById('modalExportPdf').addEventListener('click', () => {
+    const tableEl = document.getElementById('modalDayTable');
+    const clone = tableEl.cloneNode(true);
+    
+    const storeName = document.getElementById('modalStoreName').textContent;
+    const storeSub = document.getElementById('modalStoreSub').textContent;
+    const now = new Date();
+
+    const printHTML = `<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<title>Day Breakdown — ${storeName}</title>
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #0b1b33; background:#fff; margin:0; padding:0; }
+  .pdf-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:2px solid #3b82f6; padding-bottom:10px; }
+  .pdf-head h1 { font-size:16px; font-weight:800; margin:0; }
+  .pdf-head .sub { font-size:10px; color:#64748b; margin-top:3px; }
+  .pdf-head .meta { text-align:right; font-size:9px; color:#64748b; line-height:1.4; }
+  
+  table { width:100%; border-collapse:collapse; font-size:9px; }
+  th, td { padding:4px 6px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  thead th { background:#f8fafc; font-size:8px; font-weight:700; text-transform:uppercase; color:#475569; }
+  th.group-2025  { background:#eff6ff; color:#1d4ed8; text-align:center; }
+  th.group-prev  { background:#fef9ee; color:#b45309; text-align:center; }
+  th.group-2026  { background:#f0fdf4; color:#15803d; text-align:center; }
+  th.group-ratios{ background:#faf5ff; color:#7e22ce; text-align:center; }
+  
+  td.cell-2025 { background:#f8fbff; }
+  td.cell-prev { background:#fffdf4; }
+  td.cell-2026 { background:#f7fdf9; }
+  tr.subtotal-row td { background:#e8f0fe !important; font-weight:800 !important; border-top:1px solid #3b82f6 !important; }
+  .cell-positive { color:#15803d; }
+  .cell-negative { color:#b91c1c; }
+  .pct-up { color:#15803d; }
+  .pct-down { color:#b91c1c; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+  @media print { .toolbar { display:none; } }
+  
+  .toolbar { position: fixed; top: 10px; right: 10px; z-index: 9999; background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer; box-shadow: 0 4px 12px rgba(59,130,246,.4); }
+</style>
+</head><body>
+  <button class="toolbar no-print" onclick="window.print()">Save as PDF</button>
+  <div class="pdf-head">
+    <div>
+      <h1>${storeName}</h1>
+      <div class="sub">${storeSub}</div>
+    </div>
+    <div class="meta">
+      <div>Generated: ${now.toLocaleString()}</div>
+    </div>
+  </div>
+  ${clone.outerHTML}
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (!win){ alert('Popup blocked. Please allow popups for PDF export.'); return; }
+    win.document.open();
+    win.document.write(printHTML);
+    win.document.close();
+  });
+
 
   modalCloseBtn.addEventListener('click', () => storeDayModal.classList.remove('open'));
   storeDayModal.addEventListener('click', e => {

@@ -127,11 +127,17 @@
     .export-btn.pdf{color:#b91c1c;border-color:#fecaca}
     .export-btn.pdf:hover{background:#fef2f2;border-color:#fca5a5}
 
-    .table-scroll{max-height:none;overflow:visible}
+    /* Set a max height and enable vertical scrolling */
+    .table-scroll{max-height:calc(100vh - 250px); overflow:auto;} 
+    
     table{width:100%;border-collapse:collapse;font-size:.74rem}
-    thead{position:sticky;top:0;z-index:10}
+    
+    /* Ensure the header sticks */
+    thead{position:sticky;top:0;z-index:10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
     thead tr{background:#fff}
 
+
+    
     th{
       text-align:right;
       padding:8px 6px 6px;
@@ -358,13 +364,12 @@
         <input type="number" id="dayTo" placeholder="31" min="1" max="31" value="31">
       </div>
     </div>
-    <div class="filter-actions">
+        <div class="filter-actions">
       <div class="view-toggle" id="viewToggle">
         <button data-view="charts" class="active"><i class="fas fa-chart-bar"></i> Charts</button>
         <button data-view="table"><i class="fas fa-table"></i> Table</button>
       </div>
       <button class="btn btn-outline" id="resetFilters"><i class="fas fa-undo"></i> Reset</button>
-      <button class="btn btn-primary" id="applyFilters"><i class="fas fa-check"></i> Apply</button>
     </div>
   </div>
 
@@ -680,6 +685,8 @@ function renderOptions(key){
       renderOptions(key);
       updateChipLabel(key);
       if (key === 'area') rebuildStoreOptionsFromManagers();
+            applyFiltersAndRender(); // <-- ADD THIS
+
     });
   });
 }
@@ -757,6 +764,8 @@ document.querySelectorAll('[data-all]').forEach(btn => {
     renderOptions(key);
     updateChipLabel(key);
     if (key === 'area') rebuildStoreOptionsFromManagers();
+        applyFiltersAndRender(); // <-- ADD THIS
+
   });
 });
 document.querySelectorAll('[data-none]').forEach(btn => {
@@ -767,6 +776,8 @@ document.querySelectorAll('[data-none]').forEach(btn => {
     renderOptions(key);
     updateChipLabel(key);
     if (key === 'area') rebuildStoreOptionsFromManagers();
+        applyFiltersAndRender(); // <-- ADD THIS
+
   });
 });
 
@@ -809,7 +820,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
   const clearSavedBtn = $('clearSavedBtn');
   const filterBar = $('filterBar'), kpiPanel = $('kpiPanel'), chartsPanel = $('chartsPanel'), tablePanel = $('tablePanel');
   const emptyState = $('emptyState'), loadingState = $('loadingState'), errorBox = $('errorBox'), errorText = $('errorText');
-  const dayFrom = $('dayFrom'), dayTo = $('dayTo'), applyFilters = $('applyFilters'), resetFilters = $('resetFilters');
+  const dayFrom = $('dayFrom'), dayTo = $('dayTo'), resetFilters = $('resetFilters');
   const tableBody = $('tableBody');
   const adsToggle = $('adsToggle');
   const lflToggle = $('lflToggle');
@@ -1375,7 +1386,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     renderTable(filteredData);
   }
 
-  applyFilters.addEventListener('click', applyFiltersAndRender);
+  
 
   resetFilters.addEventListener('click', () => {
     dayFrom.value = 1; dayTo.value = 31;
@@ -1423,6 +1434,9 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     updateKPIs(filteredData);
     renderTable(filteredData);
   });
+    // Auto-apply when day range inputs change
+  dayFrom.addEventListener('change', applyFiltersAndRender);
+  dayTo.addEventListener('change', applyFiltersAndRender);
 
   // =====================================================
   // EXPORT — EXCEL

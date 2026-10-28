@@ -37,11 +37,12 @@
     .header h1 { font-size: 1.4rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
     .header h1 i { color: var(--primary); font-size: 1.7rem; }
     .badge { background: var(--border); color: var(--text-muted); padding: 3px 12px; border-radius: 30px; font-size: .75rem; font-weight: 600; }
+    
     .header-right {
       display: flex;
       align-items: center;
       gap: 8px;
-      flex-wrap: nowrap; /* Changed to nowrap to prevent dropping */
+      flex-wrap: nowrap;
       min-width: 0;
     }
     
@@ -53,41 +54,16 @@
       min-width: 0;
     }
 
-    .search-bar {
-      flex: 1 1 100px;
-      max-width: 250px;
-      min-width: 100px;
-    }
-
-    /* Hide the file name text on smaller screens to save space */
-    @media (max-width: 1400px) {
-      .upload-area .file-info {
-        display: none !important;
-      }
-      .upload-area {
-        padding: 4px !important;
-      }
-    }
-    
-    @media (max-width: 1100px) {
-      .header-right {
-        flex-wrap: wrap;
-      }
-      .search-upload-group {
-        width: 100%;
-        margin-bottom: 8px;
-      }
-    }
-    .icon-btn { background: var(--surface); border: 1.5px solid var(--border-strong); color: var(--text-muted); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .9rem; transition: .2s; position: relative; }
+    .icon-btn { background: var(--surface); border: 1.5px solid var(--border-strong); color: var(--text-muted); width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .9rem; transition: .2s; position: relative; flex-shrink: 0; }
     .icon-btn:hover { background: var(--surface-hover); color: var(--primary); border-color: var(--primary); transform: translateY(-1px); }
     .icon-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .notif-count { position: absolute; top: -3px; right: -3px; background: var(--danger); color: #fff; font-size: .55rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
 
-    .upload-area { background: var(--surface); padding: 5px 14px 5px 16px; border-radius: 60px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); }
-    .upload-area label { background: var(--primary); color: #fff; padding: 7px 16px; border-radius: 40px; font-weight: 600; font-size: .85rem; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: .2s; }
+    .upload-area { background: var(--surface); padding: 4px 6px 4px 6px; border-radius: 60px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); flex-shrink: 0; }
+    .upload-area label { background: var(--primary); color: #fff; padding: 6px 14px; border-radius: 40px; font-weight: 600; font-size: .85rem; cursor: pointer; display: flex; align-items: center; gap: 7px; transition: .2s; }
     .upload-area label:hover { background: var(--primary-hover); }
     .upload-area input[type=file] { display: none; }
-    .upload-area .file-info { display: flex; flex-direction: column; max-width: 130px; overflow: hidden; }
+    .upload-area .file-info { display: flex; flex-direction: column; max-width: 100px; margin-right: 6px; overflow: hidden; }
     .upload-area .file-info span { color: var(--text-muted); font-size: .75rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .upload-area .file-info small { color: var(--text-light); font-size: .65rem; }
 
@@ -99,12 +75,21 @@
     .tab-btn.active { background: var(--primary); color: #fff; }
 
     /* ===== SEARCH ===== */
-    .search-bar { position: relative; flex: 1 1 250px; max-width: 350px; }
+    .search-bar { position: relative; flex: 1 1 100px; max-width: 250px; min-width: 100px; }
     .search-bar input { width: 100%; background: var(--surface); border: 1.5px solid var(--border-strong); border-radius: 12px; padding: 9px 14px 9px 36px; font-size: .85rem; font-family: inherit; color: var(--text-main); outline: none; transition: .2s; }
     .search-bar input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
     .search-bar i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: .8rem; }
     [dir="rtl"] .search-bar i { left: auto; right: 12px; }
     [dir="rtl"] .search-bar input { padding: 9px 36px 9px 14px; }
+
+    @media (max-width: 1400px) {
+      .upload-area .file-info { display: none !important; }
+      .upload-area { padding: 4px !important; }
+    }
+    @media (max-width: 1100px) {
+      .header-right { flex-wrap: wrap; }
+      .search-upload-group { width: 100%; margin-bottom: 8px; }
+    }
 
     /* ===== FILTER BAR ===== */
     .filter-bar { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); display: none; align-items: center; gap: 10px; flex-wrap: wrap; position: relative; z-index: 40; }
@@ -339,7 +324,6 @@
       body { padding: 8px; }
       .header h1 { font-size: 1rem; }
       .kpi-grid { grid-template-columns: 1fr; }
-      .upload-area .file-info { display: none; }
       .search-bar { max-width: 100%; }
       .tabs-bar { padding: 3px; }
       .tab-btn { padding: 7px 12px; font-size: .75rem; }
@@ -354,12 +338,11 @@
   <div class="header">
     <h1><i class="fas fa-brain"></i> Sales Intelligence <span class="badge" id="rowCountBadge">No data</span></h1>
     <div class="header-right">
-                <div class="search-upload-group">
+      <div class="search-upload-group">
         <div class="search-bar">
           <i class="fas fa-search"></i>
           <input type="text" id="globalSearch" placeholder="Search..." autocomplete="off">
         </div>
-        
         <div class="upload-area" style="padding: 4px 6px 4px 6px;">
           <label for="fileInput" style="padding: 6px 14px;"><i class="fas fa-cloud-upload-alt"></i> <span id="uploadLabel">Upload</span></label>
           <input type="file" id="fileInput" accept=".xlsx, .xls, .csv">
@@ -369,6 +352,7 @@
           </div>
         </div>
       </div>
+      
       <button class="icon-btn" id="langBtn" title="Toggle Language"><i class="fas fa-language"></i></button>
       <button class="icon-btn" id="helpBtn" title="Help & Shortcuts"><i class="fas fa-question"></i></button>
       <div style="position:relative;">
@@ -398,14 +382,17 @@
       <button class="icon-btn" id="themeToggle" title="Theme"><i class="fas fa-moon"></i></button>
     </div>
   </div>
-   <!-- TABS -->
+
+  <!-- TABS -->
   <div class="tabs-bar">
     <button class="tab-btn active" data-tab="table"><i class="fas fa-table"></i> Detailed</button>
     <button class="tab-btn" data-tab="overview"><i class="fas fa-chart-pie"></i> Overview</button>
+    <button class="tab-btn" data-tab="yoy"><i class="fas fa-arrows-left-right-to-line"></i> YoY Compare</button>
     <button class="tab-btn" data-tab="leaderboard"><i class="fas fa-trophy"></i> Leaderboard</button>
     <button class="tab-btn" data-tab="heatmap"><i class="fas fa-fire"></i> Heatmap</button>
     <button class="tab-btn" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
   </div>
+
   <!-- FILTER BAR -->
   <div class="filter-bar" id="filterBar">
     <div class="filter-chips-scroll">
@@ -483,6 +470,7 @@
       <div class="kpi-meta" id="kpiMomSalesMeta">—</div>
     </div>
   </div>
+
   <!-- OVERVIEW TAB -->
   <div class="view-section" id="tabOverview">
     <div class="charts-grid" id="chartsPanel" style="display:none;">
@@ -504,6 +492,42 @@
     </div>
   </div>
 
+  <!-- YOY TAB -->
+  <div class="view-section" id="tabYoy">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-chart-line"></i> Year-over-Year Sales & Transactions</div>
+      <div class="chart-container" style="height:320px;"><canvas id="yoyChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-table"></i> Month-by-Month YoY Breakdown</div>
+      <div class="table-scroll" style="max-height:500px;">
+        <table id="yoyTable">
+          <thead>
+            <tr>
+              <th rowspan="2" style="text-align:left; vertical-align:bottom;">Month</th>
+              <th colspan="4" class="group-2025">Last Year</th>
+              <th colspan="4" class="group-2026">This Year</th>
+              <th colspan="3" class="group-ratios">Growth %</th>
+            </tr>
+            <tr>
+              <th class="group-2025">Sales</th>
+              <th class="group-2025">CC</th>
+              <th class="group-2025">AT</th>
+              <th class="group-2025">Days</th>
+              <th class="group-2026">Sales</th>
+              <th class="group-2026">CC</th>
+              <th class="group-2026">AT</th>
+              <th class="group-2026">Days</th>
+              <th class="group-ratios">Sales</th>
+              <th class="group-ratios">CC</th>
+              <th class="group-ratios">AT</th>
+            </tr>
+          </thead>
+          <tbody id="yoyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
   <!-- INSIGHTS TAB -->
   <div class="view-section" id="tabInsights">
     <div id="executiveSummary" style="display:none;">
@@ -543,7 +567,8 @@
       <div id="heatmapContainer"></div>
     </div>
   </div>
-  <!-- TABLE TAB -->
+
+  <!-- DETAILED TAB -->
   <div class="view-section active" id="tabTable">
     <div class="table-container" id="tablePanel" style="display:none;">
       <div class="table-header-bar">
@@ -551,8 +576,8 @@
         <div class="table-controls">
           <button class="toggle-btn lfl-toggle" id="lflToggle"><i class="fas fa-filter"></i> LFL Only</button>
           <button class="toggle-btn" id="adsToggle"><i class="fas fa-calculator"></i> ADS</button>
-          <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Excel</button>
-          <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
+          <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
         </div>
       </div>
       <div class="table-scroll">
@@ -606,7 +631,7 @@
     <pre id="errorText"></pre>
   </div>
 
-  <div class="footer"><i class="fas fa-brain"></i> Sales Intelligence Platform · v4.1</div>
+  <div class="footer"><i class="fas fa-brain"></i> Sales Intelligence Platform · v4.2</div>
 
   <!-- MODAL -->
   <div class="modal-overlay" id="storeDayModal">
@@ -757,7 +782,7 @@ $('langBtn').addEventListener('click', () => {
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable' };
+  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable', yoy: 'tabYoy' };
   const target = $(sectionIds[tabName]);
   if (target) target.classList.add('active');
   
@@ -767,6 +792,7 @@ function switchTab(tabName) {
     if (tabName === 'heatmap') renderHeatmap(window.__filteredData);
     if (tabName === 'table') renderTable(window.__filteredData);
     if (tabName === 'overview') renderCharts(window.__filteredData);
+    if (tabName === 'yoy') renderYoY(window.__filteredData);
   } else {
     showToast('Please upload a file first', 'info');
   }
@@ -998,7 +1024,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 // ===== MAIN DASHBOARD =====
 (function() {
   let rawData = [], filteredData = [];
-  let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst;
+  let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
   let adsMode = false, lflOnly = false, currentSort = { key: null, dir: 'desc' };
 
   const fileInput = $('fileInput'), fileName = $('fileName'), fileMeta = $('fileMeta');
@@ -1155,7 +1181,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       chartsPanel.style.display = 'grid';
       tablePanel.style.display = 'block';
       emptyState.style.display = 'none';
-      $('executiveSummary').style.display = 'block';
+      if ($('executiveSummary')) $('executiveSummary').style.display = 'block';
       dayFrom.value = 1; dayTo.value = 31;
       applyFiltersAndRender();
 
@@ -1251,6 +1277,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     renderLeaderboard(filteredData);
     renderHeatmap(filteredData);
     renderTable(filteredData);
+    renderYoY(filteredData);
   }
   window.applyFiltersAndRender = applyFiltersAndRender;
 
@@ -1434,7 +1461,129 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     });
   }
 
-  // ===== INSIGHTS (WITH IMPROVED ANOMALY DETECTION) =====
+  // ===== YOY COMPARISON =====
+  function renderYoY(data) {
+    if (!data || !data.length) return;
+    const ctx = getMonthContext();
+    const prevY = ctx.curY - 1;
+    
+    const yoyData = [];
+    let totalLY_sales = 0, totalLY_cc = 0, totalLY_at = 0, totalLY_days = 0;
+    let totalTY_sales = 0, totalTY_cc = 0, totalTY_at = 0, totalTY_days = 0;
+    
+    for (let m = 1; m <= 12; m++) {
+      const lyRows = data.filter(r => r.year === prevY && r.month === m);
+      const tyRows = data.filter(r => r.year === ctx.curY && r.month === m);
+      
+      if (!lyRows.length && !tyRows.length) continue;
+      
+      const ly_sales = lyRows.reduce((s, r) => s + r.net, 0);
+      const ly_cc = lyRows.reduce((s, r) => s + r.orders, 0);
+      const ly_at = ly_cc > 0 ? ly_sales / ly_cc : 0;
+      const ly_days = new Set(lyRows.filter(r => r.net > 0).map(r => r.day)).size;
+      
+      const ty_sales = tyRows.reduce((s, r) => s + r.net, 0);
+      const ty_cc = tyRows.reduce((s, r) => s + r.orders, 0);
+      const ty_at = ty_cc > 0 ? ty_sales / ty_cc : 0;
+      const ty_days = new Set(tyRows.filter(r => r.net > 0).map(r => r.day)).size;
+      
+      totalLY_sales += ly_sales; totalLY_cc += ly_cc; totalLY_days += ly_days;
+      totalTY_sales += ty_sales; totalTY_cc += ty_cc; totalTY_days += ty_days;
+      
+      const salesPct = ly_sales > 0 ? ((ty_sales - ly_sales) / ly_sales * 100) : (ty_sales > 0 ? 100 : 0);
+      const ccPct = ly_cc > 0 ? ((ty_cc - ly_cc) / ly_cc * 100) : (ty_cc > 0 ? 100 : 0);
+      const atPct = ly_at > 0 ? ((ty_at - ly_at) / ly_at * 100) : (ty_at > 0 ? 100 : 0);
+      
+      yoyData.push({
+        month: MONTHS[m-1], 
+        ly_sales, ly_cc, ly_at, ly_days, 
+        ty_sales, ty_cc, ty_at, ty_days,
+        salesPct, ccPct, atPct
+      });
+    }
+    
+    totalLY_at = totalLY_cc > 0 ? totalLY_sales / totalLY_cc : 0;
+    totalTY_at = totalTY_cc > 0 ? totalTY_sales / totalTY_cc : 0;
+    const totalSalesPct = totalLY_sales > 0 ? ((totalTY_sales - totalLY_sales) / totalLY_sales * 100) : 0;
+    const totalCcPct = totalLY_cc > 0 ? ((totalTY_cc - totalLY_cc) / totalLY_cc * 100) : 0;
+    const totalAtPct = totalLY_at > 0 ? ((totalTY_at - totalLY_at) / totalLY_at * 100) : 0;
+
+    // Render Table
+    let html = '';
+    yoyData.forEach(d => {
+      const sCls = d.salesPct >= 0 ? 'cell-positive' : 'cell-negative';
+      const cCls = d.ccPct >= 0 ? 'cell-positive' : 'cell-negative';
+      const aCls = d.atPct >= 0 ? 'cell-positive' : 'cell-negative';
+      html += `<tr>
+        <td class="left-cell"><strong>${d.month}</strong></td>
+        <td class="cell-2025">${fmtCur(d.ly_sales)}</td>
+        <td class="cell-2025">${fmtNum(d.ly_cc)}</td>
+        <td class="cell-2025">${fmtAT(d.ly_at)}</td>
+        <td class="cell-2025">${d.ly_days}</td>
+        <td class="cell-2026">${fmtCur(d.ty_sales)}</td>
+        <td class="cell-2026">${fmtNum(d.ty_cc)}</td>
+        <td class="cell-2026">${fmtAT(d.ty_at)}</td>
+        <td class="cell-2026">${d.ty_days}</td>
+        <td class="cell-ratios ${sCls}">${d.salesPct >= 0 ? '+' : ''}${d.salesPct.toFixed(1)}%</td>
+        <td class="cell-ratios ${cCls}">${d.ccPct >= 0 ? '+' : ''}${d.ccPct.toFixed(1)}%</td>
+        <td class="cell-ratios ${aCls}">${d.atPct >= 0 ? '+' : ''}${d.atPct.toFixed(1)}%</td>
+      </tr>`;
+    });
+    
+    const stSCls = totalSalesPct >= 0 ? 'cell-positive' : 'cell-negative';
+    const stCCls = totalCcPct >= 0 ? 'cell-positive' : 'cell-negative';
+    const stACls = totalAtPct >= 0 ? 'cell-positive' : 'cell-negative';
+    html += `<tr class="subtotal-row">
+      <td class="left-cell">TOTAL</td>
+      <td class="cell-2025">${fmtCur(totalLY_sales)}</td>
+      <td class="cell-2025">${fmtNum(totalLY_cc)}</td>
+      <td class="cell-2025">${fmtAT(totalLY_at)}</td>
+      <td class="cell-2025">${totalLY_days}</td>
+      <td class="cell-2026">${fmtCur(totalTY_sales)}</td>
+      <td class="cell-2026">${fmtNum(totalTY_cc)}</td>
+      <td class="cell-2026">${fmtAT(totalTY_at)}</td>
+      <td class="cell-2026">${totalTY_days}</td>
+      <td class="cell-ratios ${stSCls}">${totalSalesPct >= 0 ? '+' : ''}${totalSalesPct.toFixed(1)}%</td>
+      <td class="cell-ratios ${stCCls}">${totalCcPct >= 0 ? '+' : ''}${totalCcPct.toFixed(1)}%</td>
+      <td class="cell-ratios ${stACls}">${totalAtPct >= 0 ? '+' : ''}${totalAtPct.toFixed(1)}%</td>
+    </tr>`;
+    
+    $('yoyTableBody').innerHTML = html;
+
+    // Render Chart
+    if (yoyChartInstance) yoyChartInstance.destroy();
+    yoyChartInstance = new Chart($('yoyChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: yoyData.map(d => d.month),
+        datasets: [
+          { label: `${prevY} Sales`, data: yoyData.map(d => d.ly_sales), backgroundColor: 'rgba(148,163,184,.5)', borderRadius: 6, yAxisID: 'y' },
+          { label: `${ctx.curY} Sales`, data: yoyData.map(d => d.ty_sales), backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 6, yAxisID: 'y' },
+          { label: `${prevY} CC`, data: yoyData.map(d => d.ly_cc), backgroundColor: 'rgba(245,158,11,.3)', borderRadius: 6, yAxisID: 'y1', type: 'line', borderColor: '#f59e0b', borderWidth: 2, tension: .3, pointRadius: 3 },
+          { label: `${ctx.curY} CC`, data: yoyData.map(d => d.ty_cc), backgroundColor: 'rgba(34,197,94,.85)', borderRadius: 6, yAxisID: 'y1', type: 'line', borderColor: '#22c55e', borderWidth: 2, tension: .3, pointRadius: 3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          tooltip: { 
+            callbacks: { 
+              label: c => `${c.dataset.label}: ${c.datasetIndex > 1 ? fmtNum(c.raw) + ' CC' : fmtCur(c.raw)}` 
+            } 
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Sales', font: {size: 10} }, ticks: { callback: v => fmtNum(v) } },
+          y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Transactions (CC)', font: {size: 10} }, ticks: { callback: v => fmtNum(v) } }
+        }
+      }
+    });
+  }
+
+  // ===== INSIGHTS =====
   function renderInsights(data) {
     if (!data || !data.length) return;
     const tm = window.__targetMaps || buildTargetMap(rawData);
@@ -1895,53 +2044,119 @@ ${clone.outerHTML}
   modalCloseBtn.addEventListener('click', () => storeDayModal.classList.remove('open'));
   storeDayModal.addEventListener('click', e => { if (e.target === storeDayModal) storeDayModal.classList.remove('open'); });
 
-  // ===== EXPORTS =====
+  // ===== EXPORTS (MATCHES WHAT YOU SEE ON SCREEN) =====
   $('exportExcel').addEventListener('click', () => {
     if (!filteredData.length) { showToast('No data', 'error'); return; }
+    
     const wb = XLSX.utils.book_new();
-    const summaryData = [
-      ['Metric', 'Value'],
-      ['Total Rows', filteredData.length],
-      ['Unique Stores', new Set(filteredData.map(r => r.storeCode)).size],
-      ['Unique Managers', new Set(filteredData.map(r => r.area)).size],
-      ['Total Net Sales', filteredData.reduce((s, r) => s + r.net, 0)],
-      ['Total Orders', filteredData.reduce((s, r) => s + r.orders, 0)]
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
-    const isSY = y => y === 2026 || (y != null && y > 2025);
-    const sMap = new Map();
-    filteredData.forEach(r => { if (!sMap.has(r.storeCode)) sMap.set(r.storeCode, { store: r.store, code: r.storeCode, area: r.area, n25: 0, n26: 0, o25: 0, o26: 0 }); const s = sMap.get(r.storeCode); if (r.year === 2025) { s.n25 += r.net; s.o25 += r.orders; } else if (isSY(r.year)) { s.n26 += r.net; s.o26 += r.orders; } });
-    const sRows = [['Store', 'Code', 'Manager', '2025 Sales', '2026 Sales', 'YoY %', '2025 Orders', '2026 Orders']];
-    [...sMap.values()].sort((a, b) => b.n26 - a.n26).forEach(s => sRows.push([s.store, s.code, s.area, Math.round(s.n25), Math.round(s.n26), s.n25 > 0 ? ((s.n26 - s.n25) / s.n25 * 100).toFixed(1) : '', Math.round(s.o25), Math.round(s.o26)]));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sRows), 'Stores');
-    const aMap = new Map();
-    filteredData.forEach(r => { if (!aMap.has(r.area)) aMap.set(r.area, { area: r.area, n25: 0, n26: 0, stores: new Set() }); const a = aMap.get(r.area); a.stores.add(r.storeCode); if (r.year === 2025) a.n25 += r.net; else if (isSY(r.year)) a.n26 += r.net; });
-    const aRows = [['Manager', 'Stores', '2025 Sales', '2026 Sales', 'YoY %']];
-    [...aMap.values()].sort((a, b) => b.n26 - a.n26).forEach(a => aRows.push([a.area, a.stores.size, Math.round(a.n25), Math.round(a.n26), a.n25 > 0 ? ((a.n26 - a.n25) / a.n25 * 100).toFixed(1) : '']));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aRows), 'Managers');
-    const mMap = new Map();
-    filteredData.forEach(r => { if (!r.year || !r.month) return; const k = `${r.year}-${String(r.month).padStart(2, '0')}`; if (!mMap.has(k)) mMap.set(k, { y: r.year, m: r.month, net: 0, ord: 0 }); mMap.get(k).net += r.net; mMap.get(k).ord += r.orders; });
-    const tRows = [['Year', 'Month', 'Net Sales', 'Orders']];
-    [...mMap.entries()].sort().forEach(([, v]) => tRows.push([v.y, MONTHS[v.m - 1], Math.round(v.net), Math.round(v.ord)]));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tRows), 'Trends');
+    
+    // 1. EXACT EXPORT FROM DETAILED TABLE
+    const table = document.getElementById('dataTable');
+    const aoa = [];
+    
+    // Extract multi-level headers correctly
+    table.querySelectorAll('thead tr').forEach(tr => {
+      const row = [];
+      tr.querySelectorAll('th').forEach(th => {
+        let text = th.innerText.trim();
+        if (text === '2025') text = '2025';
+        if (text.includes('Prev Month')) text = th.innerText.trim();
+        
+        const cs = parseInt(th.getAttribute('colspan') || 1);
+        row.push(text);
+        for (let i = 1; i < cs; i++) row.push('');
+      });
+      aoa.push(row);
+    });
+    
+    // Extract sorted, filtered rows + the subtotal row exactly as seen
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      const row = [];
+      tr.querySelectorAll('td').forEach(td => {
+        const text = td.innerText.trim().replace(/,/g, '');
+        row.push(text === '—' ? '' : text);
+      });
+      aoa.push(row);
+    });
 
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    
+    // Auto-size columns for readability
+    ws['!cols'] = [
+      {wch:24},{wch:14},{wch:6},{wch:11},
+      {wch:9},{wch:13},{wch:9},{wch:8},
+      {wch:15},{wch:15},{wch:11},{wch:10},
+      {wch:9},{wch:13},{wch:9},{wch:8},
+      {wch:9},{wch:10},{wch:9}
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Detailed Table');
+
+    // 2. YOY COMPARISON (if data exists)
+    const ctxY = getMonthContext();
+    const prevY = ctxY.curY - 1;
+    const yoyRows = [['Month', 'LY Sales', 'LY CC', 'LY AT', 'LY Days', 'TY Sales', 'TY CC', 'TY AT', 'TY Days', 'Sales Growth %', 'CC Growth %', 'AT Growth %']];
+    for (let m = 1; m <= 12; m++) {
+      const lyR = filteredData.filter(r => r.year === prevY && r.month === m);
+      const tyR = filteredData.filter(r => r.year === ctxY.curY && r.month === m);
+      if (!lyR.length && !tyR.length) continue;
+      const lS = lyR.reduce((s,r)=>s+r.net,0), lC = lyR.reduce((s,r)=>s+r.orders,0), lA = lC>0?lS/lC:0, lD = new Set(lyR.filter(r=>r.net>0).map(r=>r.day)).size;
+      const tS = tyR.reduce((s,r)=>s+r.net,0), tC = tyR.reduce((s,r)=>s+r.orders,0), tA = tC>0?tS/tC:0, tD = new Set(tyR.filter(r=>r.net>0).map(r=>r.day)).size;
+      yoyRows.push([MONTHS[m-1], Math.round(lS), lC, lA.toFixed(1), lD, Math.round(tS), tC, tA.toFixed(1), tD, lS>0?((tS-lS)/lS*100).toFixed(1):'', lC>0?((tC-lC)/lC*100).toFixed(1):'', lA>0?((tA-lA)/lA*100).toFixed(1):'']);
+    }
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yoyRows), 'YoY Compare');
+
+    // Export the file
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `Sales_Intelligence_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.href = url; a.download = `Sales_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast('Excel exported (4 sheets)', 'success');
-    addNotif('Multi-sheet Excel export');
+    
+    showToast('Excel exported matching current view', 'success');
+    addNotif('Excel export from Detailed view');
   });
 
   $('exportPdf').addEventListener('click', () => {
     if (!filteredData.length) { showToast('No data', 'error'); return; }
-    const clone = document.getElementById('dataTable').cloneNode(true);
+    
+    const tableEl = document.getElementById('dataTable');
+    const clone = tableEl.cloneNode(true);
+    
+    // Remove hidden sorting classes from clone so they don't print
+    clone.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    clone.querySelectorAll('tr').forEach(tr => tr.classList.remove('missed-target'));
+
     const now = new Date();
     const printHTML = `<!doctype html><html><head><meta charset="utf-8"><title>Sales Report</title>
-<style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:'Inter',system-ui,sans-serif;color:#0b1b33;background:#fff;margin:0;padding:0}h1{font-size:16px;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #3b82f6}table{width:100%;border-collapse:collapse;font-size:8px}th,td{padding:3px 4px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}thead th{background:#f8fafc;font-size:7px;text-transform:uppercase}tr{page-break-inside:avoid}thead{display:table-header-group}.toolbar{position:fixed;top:10px;right:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer}@media print{.toolbar{display:none}}</style></head><body>
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, sans-serif; color:#0b1b33; background:#fff; margin:0; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  h1 { font-size:16px; margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid #3b82f6; }
+  table { width:100%; border-collapse:collapse; font-size:8px; }
+  th, td { padding:3px 4px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  thead th { background:#f8fafc; font-size:7px; text-transform:uppercase; }
+  th.group-2025 { background:#eff6ff; color:#1d4ed8; }
+  th.group-prev { background:#fef9ee; color:#b45309; }
+  th.group-2026 { background:#f0fdf4; color:#15803d; }
+  th.group-ratios { background:#faf5ff; color:#7e22ce; }
+  td.cell-2025 { background:#f8fbff; }
+  td.cell-prev { background:#fffdf4; }
+  td.cell-2026 { background:#f7fdf9; }
+  tr.subtotal-row td { background:#e8f0fe !important; font-weight:800 !important; border-top:1px solid #3b82f6 !important; }
+  .cell-positive { color:#15803d; }
+  .cell-negative { color:#b91c1c; }
+  .pct-up { color:#15803d; }
+  .pct-down { color:#b91c1c; }
+  tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+  .toolbar { position:fixed; top:10px; right:10px; background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer; z-index:9999; }
+  @media print { .toolbar { display:none; } }
+</style></head><body>
 <button class="toolbar" onclick="window.print()">Save as PDF</button>
 <h1>Sales Intelligence Report · ${now.toLocaleString()}</h1>
 ${clone.outerHTML}

@@ -1204,7 +1204,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       if (!rows.length) throw new Error(`No valid data rows found. Header row: ${headerRowIdx}`);
 
       rawData = rows;
-      rowCountBadge.textContent = `${rows.length} rows${skipped ? ` (${skipped} skipped)` : ''}`;
+      const initialStores = new Set(rows.map(r => r.storeCode)).size;       rowCountBadge.textContent = `${initialStores} stores • ${rows.length} rows${skipped ? ` (${skipped} skipped)` : ''}`;
       loadingState.style.display = 'none';
 
       populateFilters(rows);
@@ -1324,8 +1324,16 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     });
     masterAllOptions.store = storeEntries;
 
-    const areaSet = new Set();
-    data.forEach(r => { if (r.area) areaSet.add(r.area); });
+        const areaSet = new Set();
+    data.forEach(r => { 
+      if (r.area) {
+        const lower = r.area.toLowerCase();
+        // Exclude 'closed' and 'unknown' (case-insensitive)
+        if (lower !== 'closed' && lower !== 'unknown') {
+          areaSet.add(r.area); 
+        }
+      } 
+    });
     masterAllOptions.area = [...areaSet].sort().map(a => ({ value: a, label: a }));
 
     masterAllOptions.year  = years.map(y => ({ value: String(y), label: String(y) }));
@@ -1355,7 +1363,7 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       updateChipLabel(k);
     });
   }
-  function applyFiltersAndRender(){
+    function applyFiltersAndRender(){
     if (!rawData || !rawData.length) return;
 
     const selYears  = [...FilterState.year.selected].map(Number);
@@ -1375,11 +1383,22 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       if (selYears.length  && selYears.length  !== totalYears  && !selYears.includes(r.year))   return false;
       if (selMonths.length && selMonths.length !== totalMonths && !selMonths.includes(r.month)) return false;
       if (selStores.length && selStores.length !== totalStores && !selStores.includes(r.storeCode)) return false;
-      if (selAreas.length  && selAreas.length  !== totalAreas  && !selAreas.includes(r.area))   return false;
+      
+      // Ensure that if the data row has an "Unknown" manager, it won't break the filter
+      if (selAreas.length  && selAreas.length  !== totalAreas) {
+        if (!selAreas.includes(r.area)) return false;
+      }
+      
       if (dFrom != null && r.day != null && r.day < dFrom) return false;
       if (dTo   != null && r.day != null && r.day > dTo)   return false;
       return true;
     });
+
+    // --- NEW: Calculate and display the number of stores ---
+    const uniqueStoresInView = new Set(filteredData.map(r => r.storeCode)).size;
+    const totalRows = filteredData.length;
+    rowCountBadge.textContent = `${uniqueStoresInView} stores • ${totalRows} rows`;
+    // -------------------------------------------------------
 
     updateKPIs(filteredData);
     if (currentView === 'charts') renderCharts(filteredData);

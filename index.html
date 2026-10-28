@@ -364,7 +364,7 @@
         <input type="number" id="dayTo" placeholder="31" min="1" max="31" value="31">
       </div>
     </div>
-        <div class="filter-actions">
+            <div class="filter-actions">
       <div class="view-toggle" id="viewToggle">
         <button data-view="charts" class="active"><i class="fas fa-chart-bar"></i> Charts</button>
         <button data-view="table"><i class="fas fa-table"></i> Table</button>
@@ -677,7 +677,7 @@ function renderOptions(key){
     </div>`;
   }).join('');
 
-  container.querySelectorAll('.fd-option').forEach(el => {
+    container.querySelectorAll('.fd-option').forEach(el => {
     el.addEventListener('click', () => {
       const v = el.dataset.value;
       if (FilterState[key].selected.has(v)) FilterState[key].selected.delete(v);
@@ -685,8 +685,9 @@ function renderOptions(key){
       renderOptions(key);
       updateChipLabel(key);
       if (key === 'area') rebuildStoreOptionsFromManagers();
-            applyFiltersAndRender(); // <-- ADD THIS
-
+      
+      // Tell the main dashboard to refresh
+      if (window.applyFiltersAndRender) window.applyFiltersAndRender();
     });
   });
 }
@@ -764,8 +765,8 @@ document.querySelectorAll('[data-all]').forEach(btn => {
     renderOptions(key);
     updateChipLabel(key);
     if (key === 'area') rebuildStoreOptionsFromManagers();
-        applyFiltersAndRender(); // <-- ADD THIS
-
+    
+    if (window.applyFiltersAndRender) window.applyFiltersAndRender();
   });
 });
 document.querySelectorAll('[data-none]').forEach(btn => {
@@ -776,8 +777,8 @@ document.querySelectorAll('[data-none]').forEach(btn => {
     renderOptions(key);
     updateChipLabel(key);
     if (key === 'area') rebuildStoreOptionsFromManagers();
-        applyFiltersAndRender(); // <-- ADD THIS
-
+    
+    if (window.applyFiltersAndRender) window.applyFiltersAndRender();
   });
 });
 
@@ -1354,9 +1355,8 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
       updateChipLabel(k);
     });
   }
-
   function applyFiltersAndRender(){
-    if (!rawData.length) return;
+    if (!rawData || !rawData.length) return;
 
     const selYears  = [...FilterState.year.selected].map(Number);
     const selMonths = [...FilterState.month.selected].map(Number);
@@ -1385,6 +1385,9 @@ function escapeAttr(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#3
     if (currentView === 'charts') renderCharts(filteredData);
     renderTable(filteredData);
   }
+
+  // Expose this function so the global filter dropdowns can trigger it
+  window.applyFiltersAndRender = applyFiltersAndRender;
 
   
 

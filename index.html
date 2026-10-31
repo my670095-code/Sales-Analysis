@@ -137,6 +137,14 @@
     .fd-option.selected .cb i { opacity: 1; }
     .fd-option .lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fd-empty { padding: 20px; text-align: center; color: var(--text-light); font-size: .8rem; }
+    .filter-chip[data-chip="dow"] i.lead { color: #8b5cf6; }
+.filter-chip[data-chip="dow"].active { background: rgba(139,92,246,.1); border-color: #8b5cf6; color: #8b5cf6; }
+.filter-chip[data-chip="dow"].active .chip-value { color: #8b5cf6; }
+.modal-dow-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; background: var(--surface-hover); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 4; }
+.modal-dow-bar .dow-label { font-size: .75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-right: 4px; }
+.dow-pill { padding: 6px 12px; border-radius: 20px; font-size: .75rem; font-weight: 600; border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text-muted); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 5px; transition: .2s; user-select: none; }
+.dow-pill:hover { background: var(--bg); color: var(--text-main); }
+.dow-pill.active { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
 
     /* ===== KPI CARDS ===== */
     .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
@@ -428,6 +436,14 @@
           <div class="fd-options" data-options></div>
         </div>
       </div>
+            <div class="filter-chip-wrap">
+        <div class="filter-chip" data-chip="dow"><i class="fas fa-calendar-week lead"></i><span>Day</span><span class="chip-value" data-value="dow">All</span><i class="fas fa-chevron-down caret"></i></div>
+        <div class="filter-dropdown" data-dropdown="dow">
+          <div class="fd-search"><i class="fas fa-search"></i><input type="text" placeholder="Search..." data-search></div>
+          <div class="fd-actions"><button type="button" data-all>Select All</button><button type="button" data-none>Clear</button></div>
+          <div class="fd-options" data-options></div>
+        </div>
+      </div>
       <div class="day-range-chip">
         <i class="fas fa-calendar-day lead"></i><span>Day</span>
         <input type="number" id="dayFrom" placeholder="1" min="1" max="31" value="1">
@@ -647,7 +663,18 @@
           <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
         </div>
       </div>
-      <div class="modal-body">
+            <div class="modal-body">
+        <div class="modal-dow-bar" id="modalDowBar">
+          <span class="dow-label"><i class="fas fa-filter"></i> Filter days:</span>
+          <button class="dow-pill" data-modal-dow="all">All</button>
+          <button class="dow-pill" data-modal-dow="0">Sun</button>
+          <button class="dow-pill" data-modal-dow="1">Mon</button>
+          <button class="dow-pill" data-modal-dow="2">Tue</button>
+          <button class="dow-pill" data-modal-dow="3">Wed</button>
+          <button class="dow-pill" data-modal-dow="4">Thu</button>
+          <button class="dow-pill" data-modal-dow="5">Fri</button>
+          <button class="dow-pill" data-modal-dow="6">Sat</button>
+        </div>
         <table id="modalDayTable">
           <thead>
             <tr>
@@ -858,12 +885,13 @@ function renderSavedViews() {
 $('saveCurrentView').addEventListener('click', () => {
   const name = prompt('Name this view:', `View ${savedViews.length + 1}`);
   if (!name) return;
-  savedViews.push({
+   savedViews.push({
     name,
     year: [...FilterState.year.selected],
     month: [...FilterState.month.selected],
     area: [...FilterState.area.selected],
     store: [...FilterState.store.selected],
+    dow: [...FilterState.dow.selected],
     dayFrom: $('dayFrom').value, dayTo: $('dayTo').value
   });
   localStorage.setItem('savedViews', JSON.stringify(savedViews));
@@ -877,9 +905,10 @@ function loadView(v) {
   FilterState.area.selected = new Set(v.area);
   rebuildStoreOptionsFromManagers();
   FilterState.store.selected = new Set(v.store);
+  FilterState.dow.selected = new Set(v.dow || FilterState.dow.options.map(o => o.value));
   $('dayFrom').value = v.dayFrom;
   $('dayTo').value = v.dayTo;
-  ['year','month','area','store'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+  ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
   if (window.applyFiltersAndRender) window.applyFiltersAndRender();
   showToast(`Loaded: ${v.name}`, 'success');
 }
@@ -914,9 +943,8 @@ const IDB = (function() {
 })();
 
 // ===== FILTER STATE =====
-const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() } };
-let masterAllOptions = { year: [], month: [], store: [], area: [] };
-
+const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() }, dow: { options: [], selected: new Set() } };
+let masterAllOptions = { year: [], month: [], store: [], area: [], dow: [] };
 function computeAvailableStoreOptions() {
   const selAreas = FilterState.area.selected;
   const totalAreas = masterAllOptions.area.length;
@@ -1244,13 +1272,23 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     const uniqueStores = []; const seenC = new Set();
     masterAllOptions.store.forEach(o => { if (seenC.has(o.value)) return; seenC.add(o.value); uniqueStores.push({ value: o.value, label: o.label }); });
     FilterState.store.options = uniqueStores; FilterState.store.selected = new Set(uniqueStores.map(o => o.value));
-    ['year','month','area','store'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+
+    const dowSet = new Set();
+    data.forEach(r => { if (r.dob && !isNaN(r.dob)) dowSet.add(r.dob.getDay()); });
+    FilterState.dow.options = [...dowSet].sort((a,b)=>a-b).map(d => ({ value: String(d), label: DAYS[d] }));
+    FilterState.dow.selected = new Set(FilterState.dow.options.map(o => o.value));
+    masterAllOptions.dow = FilterState.dow.options.slice();
+
+    ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
   }
 
   function applyFiltersAndRender() {
     if (!rawData || !rawData.length) return;
     const selY = [...FilterState.year.selected].map(Number), selM = [...FilterState.month.selected].map(Number);
     const selS = [...FilterState.store.selected], selA = [...FilterState.area.selected];
+        const selDow = [...FilterState.dow.selected].map(Number);
+    const totDow = FilterState.dow.options.length;
+    const dowActive = selDow.length > 0 && selDow.length !== totDow;
     const totY = FilterState.year.options.length, totM = FilterState.month.options.length;
     const totS = FilterState.store.options.length, totA = FilterState.area.options.length;
     const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
@@ -1262,6 +1300,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       if (selA.length && selA.length !== totA && !selA.includes(r.area)) return false;
       if (dF != null && r.day != null && r.day < dF) return false;
       if (dT != null && r.day != null && r.day > dT) return false;
+            if (dowActive && r.dob && !selDow.includes(r.dob.getDay())) return false;
       if (globalSearchTerm) { const s = `${r.store} ${r.storeCode} ${r.area}`.toLowerCase(); if (!s.includes(globalSearchTerm)) return false; }
       return true;
     });
@@ -1288,8 +1327,10 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     FilterState.area.options = masterAllOptions.area.slice(); FilterState.area.selected = new Set(masterAllOptions.area.map(o => o.value));
     const uS = [], sC = new Set();
     masterAllOptions.store.forEach(o => { if (sC.has(o.value)) return; sC.add(o.value); uS.push({ value: o.value, label: o.label }); });
-    FilterState.store.options = uS; FilterState.store.selected = new Set(uS.map(o => o.value));
-    ['year','month','area','store'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+      FilterState.store.options = uS; FilterState.store.selected = new Set(uS.map(o => o.value));
+    FilterState.dow.options = masterAllOptions.dow.slice();
+    FilterState.dow.selected = new Set(masterAllOptions.dow.map(o => o.value));
+    ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     lflOnly = false; $('lflToggle').classList.remove('active');
     currentSort = { key: null, dir: 'desc' };
     globalSearchTerm = ''; $('globalSearch').value = '';
@@ -1926,21 +1967,27 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     if (pfx.test(sName)) sName = sName.replace(pfx, `${storeCode} - `);
     else if (!sName.startsWith(storeCode)) sName = `${storeCode} - ${sName}`;
     modalStoreName.textContent = sName;
-    modalStoreSub.textContent = `Manager: ${area} • Day-wise breakdown`;
+        modalStoreSub.textContent = `Manager: ${area} • Day-wise breakdown`;
+
+    window.__modalDow = window.__modalDow || new Set();
+    const modalDowSet = window.__modalDow;
+    const dowAllowed = d => modalDowSet.size === 0 || modalDowSet.has(d.getDay());
 
     const dMap = new Map();
     const ensure = d => { if (!dMap.has(d)) dMap.set(d, { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0 }); return dMap.get(d); };
-    filteredData.forEach(r => {
+        filteredData.forEach(r => {
       if (r.storeCode !== storeCode) return;
       if (area && r.area !== area) return;
       if (r.day == null || r.month !== ctx.curM) return;
+      if (!r.dob || !dowAllowed(r.dob)) return;
       if (r.year === 2025) { const b = ensure(r.day); b.d2025 += r.net; b.o2025 += r.orders; }
       else if (r.year === ctx.curY) { const b = ensure(r.day); b.d2026 += r.net; b.o2026 += r.orders; }
     });
-    rawData.forEach(r => {
+        rawData.forEach(r => {
       if (r.storeCode !== storeCode) return;
       if (area && r.area !== area) return;
       if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
+      if (!r.dob || !dowAllowed(r.dob)) return;
       const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
       if (dF != null && r.day < dF) return;
       if (dT != null && r.day > dT) return;
@@ -2003,8 +2050,19 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
       <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
     </tr>`;
-    modalDayBody.innerHTML = html;
+       modalDayBody.innerHTML = html;
     storeDayModal.classList.add('open');
+
+    document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
+      const v = btn.dataset.modalDow;
+      const isActive = v === 'all' ? modalDowSet.size === 0 : modalDowSet.has(Number(v));
+      btn.classList.toggle('active', isActive);
+      btn.onclick = () => {
+        if (v === 'all') modalDowSet.clear();
+        else { const n = Number(v); if (modalDowSet.has(n)) modalDowSet.delete(n); else modalDowSet.add(n); }
+        openStoreDayModal(storeCode, area);
+      };
+    });
   }
 
   $('modalExportExcel').addEventListener('click', () => {
@@ -2041,9 +2099,8 @@ ${clone.outerHTML}
     showToast('Modal PDF preview opened', 'success');
   });
 
-  modalCloseBtn.addEventListener('click', () => storeDayModal.classList.remove('open'));
-  storeDayModal.addEventListener('click', e => { if (e.target === storeDayModal) storeDayModal.classList.remove('open'); });
-
+    modalCloseBtn.addEventListener('click', () => { window.__modalDow = new Set(); storeDayModal.classList.remove('open'); });
+  storeDayModal.addEventListener('click', e => { if (e.target === storeDayModal) { window.__modalDow = new Set(); storeDayModal.classList.remove('open'); } });
   // ===== EXPORTS (MATCHES WHAT YOU SEE ON SCREEN) =====
   $('exportExcel').addEventListener('click', () => {
     if (!filteredData.length) { showToast('No data', 'error'); return; }

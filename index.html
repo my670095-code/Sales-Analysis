@@ -336,6 +336,35 @@
       .tabs-bar { padding: 3px; }
       .tab-btn { padding: 7px 12px; font-size: .75rem; }
     }
+        /* ===== WASTAGE ===== */
+    :root { --waste: #dc2626; --waste-light: #fef2f2; --waste-dark: #991b1b; }
+    [data-theme="dark"] { --waste: #f87171; --waste-light: #450a0a; --waste-dark: #fca5a5; }
+    .upload-area.wastage label { background: var(--waste); }
+    .upload-area.wastage label:hover { background: var(--waste-dark); }
+    .tab-btn.wastage-tab.active { background: var(--waste); }
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--danger); color: #fff; font-size: .6rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; padding: 0 5px; margin-left: 4px; }
+    .filter-chip[data-chip="category"] i.lead { color: var(--waste); }
+    .filter-chip[data-chip="category"].active { background: var(--waste-light); border-color: var(--waste); color: var(--waste); }
+    .filter-chip[data-chip="category"].active .chip-value { color: var(--waste); }
+    .kpi-value.waste { color: var(--waste); }
+    .wastage-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+    .wastage-kpi-card { background: var(--surface); padding: 16px 18px; border-radius: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; min-width: 0; border-left: 3px solid var(--waste); }
+    .wastage-kpi-card .label { font-size: .75rem; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wastage-kpi-card .label i { color: var(--waste); flex-shrink: 0; }
+    .wastage-kpi-card .value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; letter-spacing: -.4px; color: var(--text-main); }
+    .wastage-kpi-card .meta { font-size: .7rem; color: var(--text-light); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wastage-kpi-card.warn { border-left-color: var(--warning); }
+    .wastage-kpi-card.warn .label i { color: var(--warning); }
+    .wastage-kpi-card.danger { border-left-color: var(--danger); }
+    .wastage-kpi-card.danger .value { color: var(--danger); }
+    th.group-waste { background: rgba(220,38,38,.1) !important; color: var(--waste) !important; text-align: center; }
+    td.cell-waste { background: rgba(220,38,38,.04); }
+    td.cell-waste.high { background: rgba(220,38,38,.15); color: var(--danger); font-weight: 700; }
+    td.cell-waste.medium { background: rgba(245,158,11,.12); color: var(--warning); font-weight: 700; }
+    td.cell-waste.low { background: rgba(21,128,61,.08); color: var(--success); font-weight: 700; }
+    @media(max-width: 1200px) { .wastage-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media(max-width: 900px) { .wastage-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 600px) { .wastage-kpi-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -357,6 +386,14 @@
           <div class="file-info" style="max-width:100px; margin-right: 6px;">
             <span id="fileName">No file</span>
             <small id="fileMeta"></small>
+          </div>
+        </div>
+                <div class="upload-area wastage" style="padding: 4px 6px 4px 6px;">
+          <label for="wastageInput" style="padding: 6px 14px;"><i class="fas fa-trash-can"></i> <span id="wastageUploadLabel">Wastage</span></label>
+          <input type="file" id="wastageInput" accept=".xlsx, .xls">
+          <div class="file-info" style="max-width:100px; margin-right: 6px;">
+            <span id="wastageFileName">No file</span>
+            <small id="wastageFileMeta"></small>
           </div>
         </div>
       </div>
@@ -399,6 +436,7 @@
     <button class="tab-btn" data-tab="leaderboard"><i class="fas fa-trophy"></i> Leaderboard</button>
     <button class="tab-btn" data-tab="heatmap"><i class="fas fa-fire"></i> Heatmap</button>
     <button class="tab-btn" data-tab="insights"><i class="fas fa-lightbulb"></i> Insights</button>
+        <button class="tab-btn wastage-tab" data-tab="wastage"><i class="fas fa-trash-can"></i> Wastage <span class="tab-badge" id="wastageBadge" style="display:none;">0</span></button>
   </div>
 
   <!-- FILTER BAR -->
@@ -439,6 +477,14 @@
             <div class="filter-chip-wrap">
         <div class="filter-chip" data-chip="dow"><i class="fas fa-calendar-week lead"></i><span>Day</span><span class="chip-value" data-value="dow">All</span><i class="fas fa-chevron-down caret"></i></div>
         <div class="filter-dropdown" data-dropdown="dow">
+          <div class="fd-search"><i class="fas fa-search"></i><input type="text" placeholder="Search..." data-search></div>
+          <div class="fd-actions"><button type="button" data-all>Select All</button><button type="button" data-none>Clear</button></div>
+          <div class="fd-options" data-options></div>
+        </div>
+      </div>
+            <div class="filter-chip-wrap">
+        <div class="filter-chip" data-chip="category"><i class="fas fa-tags lead"></i><span>Category</span><span class="chip-value" data-value="category">All</span><i class="fas fa-chevron-down caret"></i></div>
+        <div class="filter-dropdown" data-dropdown="category">
           <div class="fd-search"><i class="fas fa-search"></i><input type="text" placeholder="Search..." data-search></div>
           <div class="fd-actions"><button type="button" data-all>Select All</button><button type="button" data-none>Clear</button></div>
           <div class="fd-options" data-options></div>
@@ -575,6 +621,125 @@
       </div>
     </div>
   </div>
+    <!-- WASTAGE TAB -->
+  <div class="view-section" id="tabWastage">
+    <div id="wastageEmpty" class="empty-state" style="display:none;">
+      <i class="fas fa-trash-can"></i>
+      <h2>No wastage data</h2>
+      <p>Upload your wastage Excel file (with Data, Category, and Area Allocation sheets).</p>
+    </div>
+
+    <div class="wastage-kpi-grid" id="wastageKpiGrid" style="display:none;">
+      <div class="wastage-kpi-card">
+        <div class="label"><i class="fas fa-dollar-sign"></i> Wastage Amount</div>
+        <div class="value" id="wKpiAmount">—</div>
+        <div class="meta" id="wKpiAmountMeta">—</div>
+      </div>
+      <div class="wastage-kpi-card" id="wKpiPctCard">
+        <div class="label"><i class="fas fa-percent"></i> Wastage % of Sales</div>
+        <div class="value" id="wKpiPct">—</div>
+        <div class="meta" id="wKpiPctMeta">—</div>
+      </div>
+      <div class="wastage-kpi-card">
+        <div class="label"><i class="fas fa-cubes"></i> Wastage Qty</div>
+        <div class="value" id="wKpiQty">—</div>
+        <div class="meta" id="wKpiQtyMeta">—</div>
+      </div>
+      <div class="wastage-kpi-card">
+        <div class="label"><i class="fas fa-list"></i> Wastage Events</div>
+        <div class="value" id="wKpiEvents">—</div>
+        <div class="meta" id="wKpiEventsMeta">—</div>
+      </div>
+      <div class="wastage-kpi-card warn">
+        <div class="label"><i class="fas fa-tag"></i> Top Category</div>
+        <div class="value" id="wKpiTopCat" style="font-size:1.1rem;">—</div>
+        <div class="meta" id="wKpiTopCatMeta">—</div>
+      </div>
+      <div class="wastage-kpi-card danger">
+        <div class="label"><i class="fas fa-store"></i> Top Store</div>
+        <div class="value" id="wKpiTopStore" style="font-size:1.1rem;">—</div>
+        <div class="meta" id="wKpiTopStoreMeta">—</div>
+      </div>
+    </div>
+
+    <div class="charts-grid" id="wastageChartsGrid" style="display:none;">
+      <div class="chart-card">
+        <button class="chart-download-btn" data-chart="wastageCategoryChart" title="Download"><i class="fas fa-camera"></i></button>
+        <h3><i class="fas fa-tags"></i> Wastage by Category</h3>
+        <div class="chart-container"><canvas id="wastageCategoryChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <button class="chart-download-btn" data-chart="wastageMonthlyChart" title="Download"><i class="fas fa-camera"></i></button>
+        <h3><i class="fas fa-chart-line"></i> Wastage Trend &amp; % of Sales</h3>
+        <div class="chart-container"><canvas id="wastageMonthlyChart"></canvas></div>
+      </div>
+      <div class="chart-card full-width">
+        <button class="chart-download-btn" data-chart="wastageTopItemsChart" title="Download"><i class="fas fa-camera"></i></button>
+        <h3><i class="fas fa-ranking-star"></i> Top 15 Wasted Items</h3>
+        <div class="chart-container" style="height:340px"><canvas id="wastageTopItemsChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-container" id="wastageTablePanel" style="display:none;">
+      <div class="table-header-bar">
+        <h3><i class="fas fa-table"></i> Wastage by Store × Month</h3>
+        <div class="table-controls">
+          <span style="font-size:.75rem;color:var(--text-muted);" id="wastageRowInfo"></span>
+          <button class="export-btn excel" id="wastageExportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll" style="max-height:520px;">
+        <table id="wastageTable">
+          <thead>
+            <tr>
+              <th class="left-cell" data-wsort="store">Store</th>
+              <th class="left-cell" data-wsort="am">Manager</th>
+              <th data-wsort="month">Month</th>
+              <th data-wsort="cost">Wastage</th>
+              <th data-wsort="qty">Qty</th>
+              <th data-wsort="events">Events</th>
+              <th data-wsort="sales">Net Sales</th>
+              <th data-wsort="pct">Wastage %</th>
+              <th>Top Category</th>
+            </tr>
+          </thead>
+          <tbody id="wastageTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- WASTAGE ITEM MODAL -->
+  <div class="modal-overlay" id="wastageItemModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <h3><i class="fas fa-trash-can"></i> <span id="wModalTitle">Store</span></h3>
+          <div class="sub" id="wModalSub">Item-level wastage breakdown</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="export-btn excel" id="wModalExportExcel"><i class="fas fa-file-excel"></i> Excel</button>
+          <button class="modal-close" id="wModalClose"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <table id="wastageItemTable">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Item</th>
+              <th style="text-align:left;">Category</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Wastage Amount</th>
+              <th>Events</th>
+            </tr>
+          </thead>
+          <tbody id="wastageItemBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 
   <!-- HEATMAP TAB -->
   <div class="view-section" id="tabHeatmap">
@@ -605,6 +770,7 @@
               <th colspan="4" class="group-prev" id="groupHeaderPrev">Prev Month</th>
               <th colspan="4" class="group-2026" id="groupHeader2026">2026</th>
               <th colspan="3" class="group-ratios">Ratios</th>
+                            <th colspan="3" class="group-waste">Wastage</th>
             </tr>
             <tr>
               <th class="left-cell col-store" data-sort="store">Store</th>
@@ -626,6 +792,9 @@
               <th class="group-ratios th-lfl" data-sort="lfl">LFL</th>
               <th class="group-ratios th-tgt" data-sort="tgt">Tgt</th>
               <th class="group-ratios th-mom" data-sort="mom">MoM</th>
+                            <th class="group-waste" data-sort="wasteCost">Waste</th>
+              <th class="group-waste" data-sort="wastePct">Waste %</th>
+              <th class="group-waste" data-sort="wasteQty">Waste Qty</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -809,7 +978,7 @@ $('langBtn').addEventListener('click', () => {
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable', yoy: 'tabYoy' };
+  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable', yoy: 'tabYoy', wastage: 'tabWastage' };
   const target = $(sectionIds[tabName]);
   if (target) target.classList.add('active');
   
@@ -820,6 +989,7 @@ function switchTab(tabName) {
     if (tabName === 'table') renderTable(window.__filteredData);
     if (tabName === 'overview') renderCharts(window.__filteredData);
     if (tabName === 'yoy') renderYoY(window.__filteredData);
+        if (tabName === 'wastage') renderWastage();
   } else {
     showToast('Please upload a file first', 'info');
   }
@@ -939,12 +1109,15 @@ const IDB = (function() {
     async save(n, b, m) { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put({ name: n, buffer: b, savedAt: Date.now(), meta: m || {} }, KEY); tx.oncomplete = () => res(true); tx.onerror = e => rej(e.target.error); }); },
     async load() { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readonly'); const r = tx.objectStore(STORE).get(KEY); r.onsuccess = () => res(r.result || null); r.onerror = e => rej(e.target.error); }); },
     async clear() { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).delete(KEY); tx.oncomplete = () => res(true); tx.onerror = e => rej(e.target.error); }); }
+        ,
+    async saveWastage(n, b, m) { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put({ name: n, buffer: b, savedAt: Date.now(), meta: m || {} }, 'lastWastage'); tx.oncomplete = () => res(true); tx.onerror = e => rej(e.target.error); }); },
+    async loadWastage() { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readonly'); const r = tx.objectStore(STORE).get('lastWastage'); r.onsuccess = () => res(r.result || null); r.onerror = e => rej(e.target.error); }); }
   };
 })();
 
 // ===== FILTER STATE =====
-const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() }, dow: { options: [], selected: new Set() } };
-let masterAllOptions = { year: [], month: [], store: [], area: [], dow: [] };
+const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() }, dow: { options: [], selected: new Set() }, category: { options: [], selected: new Set() } };
+let masterAllOptions = { year: [], month: [], store: [], area: [], dow: [], category: [] };
 function computeAvailableStoreOptions() {
   const selAreas = FilterState.area.selected;
   const totalAreas = masterAllOptions.area.length;
@@ -1353,6 +1526,236 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       renderTable(filteredData);
     });
   });
+    // ================== WASTAGE ==================
+  let wastageData = [];
+  let wastageFileBuffer = null;
+  let wastageFileName = '';
+  let itemCategoryMap = new Map();
+  let warehouseAllocMap = new Map();
+  let wastageSort = { key: null, dir: 'desc' };
+  let wastageCharts = { category: null, monthly: null, items: null };
+  window.__wastageData = wastageData;
+
+  function processWastageWorkbook(buffer, name, meta) {
+    try {
+      const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
+
+      const catSheet = wb.Sheets['Category'] || wb.Sheets[wb.SheetNames.find(n => /categ/i.test(n))];
+      if (!catSheet) throw new Error('Sheet "Category" not found');
+      const catRows = XLSX.utils.sheet_to_json(catSheet, { defval: null });
+      itemCategoryMap = new Map();
+      catRows.forEach(r => {
+        if (r['Item No.'] == null) return;
+        itemCategoryMap.set(String(r['Item No.']).trim(), {
+          category: String(r['Category'] || 'UNMAPPED').trim().toUpperCase(),
+          uom: String(r['UOM'] || '').trim(),
+        });
+      });
+
+      const allocSheet = wb.Sheets['Area Allocation'] || wb.Sheets[wb.SheetNames.find(n => /alloc|area/i.test(n))];
+      if (!allocSheet) throw new Error('Sheet "Area Allocation" not found');
+      const allocRows = XLSX.utils.sheet_to_json(allocSheet, { defval: null });
+      warehouseAllocMap = new Map();
+      allocRows.forEach(r => {
+        if (!r['Warehouse']) return;
+        const codeRaw = r['Code'];
+        const code = codeRaw != null && String(codeRaw).trim() !== '' ? String(codeRaw).trim() : null;
+        warehouseAllocMap.set(String(r['Warehouse']).trim(), {
+          storeCode: code,
+          storeName: String(r['Store Name'] || '').trim(),
+          am: String(r['Am'] || r['AM'] || '').trim() || 'Unmapped',
+        });
+      });
+
+      const dataSheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
+      if (!dataSheet) throw new Error('Sheet "Data" not found');
+      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { defval: null, raw: true });
+
+      const unmappedWh = new Set(), unmappedItems = new Set();
+      const rows = [];
+      dataRows.forEach(r => {
+        const wh = String(r['Warehouse'] ?? '').trim();
+        if (!wh) return;
+        const dt = parseDate(r['Date']);
+        if (!dt) return;
+        const itemNo = String(r['Item No.'] ?? '').trim();
+        const qty = Math.abs(Number(r['Qty']) || 0);
+        const price = Number(r['Price']) || 0;
+        const costRaw = Number(r['Warehouse']) || 0;
+        const cost = costRaw !== 0 ? Math.abs(costRaw) : Math.abs(qty * price);
+        const cat = itemCategoryMap.get(itemNo);
+        if (!cat) unmappedItems.add(itemNo);
+        const alloc = warehouseAllocMap.get(wh);
+        if (!alloc) unmappedWh.add(wh);
+        rows.push({
+          journId: r['JournId'],
+          date: dt,
+          ymd: `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`,
+          year: dt.getFullYear(), month: dt.getMonth() + 1, day: dt.getDate(), dow: dt.getDay(),
+          warehouse: wh,
+          storeCode: alloc && alloc.storeCode ? alloc.storeCode : wh,
+          storeName: alloc ? alloc.storeName : '',
+          am: alloc ? alloc.am : 'Unmapped',
+          itemNo, itemName: String(r['Item Name'] || '').trim(),
+          qty, price, wastageCost: cost,
+          category: cat ? cat.category : 'UNMAPPED',
+          uom: cat ? cat.uom : '',
+        });
+      });
+
+      wastageData = rows;
+      window.__wastageData = wastageData;
+      window.__wastageUnmapped = { warehouses: unmappedWh, items: unmappedItems };
+      wastageFileName = name;
+      wastageFileBuffer = buffer;
+
+      const wFn = $('wastageFileName'), wMeta = $('wastageFileMeta');
+      if (wFn) wFn.textContent = name;
+      if (wMeta) wMeta.textContent = `${fmtBytes(buffer.byteLength)} • ${rows.length} rows`;
+      if ($('wastageKpiGrid')) $('wastageKpiGrid').style.display = 'grid';
+      if ($('wastageChartsGrid')) $('wastageChartsGrid').style.display = 'grid';
+      if ($('wastageTablePanel')) $('wastageTablePanel').style.display = 'block';
+      if ($('wastageEmpty')) $('wastageEmpty').style.display = 'none';
+
+      const cats = [...new Set(rows.map(r => r.category))].sort();
+      FilterState.category.options = cats.map(c => ({ value: c, label: c }));
+      FilterState.category.selected = new Set(cats);
+      masterAllOptions.category = cats.map(c => ({ value: c, label: c }));
+      renderOptions('category');
+      updateChipLabel('category');
+
+      const totalUnmapped = unmappedWh.size + unmappedItems.size;
+      const badge = $('wastageBadge');
+      if (badge) {
+        if (totalUnmapped > 0) { badge.style.display = 'inline-flex'; badge.textContent = totalUnmapped; badge.title = `${unmappedWh.size} unmapped warehouses, ${unmappedItems.size} unmapped items`; }
+        else badge.style.display = 'none';
+      }
+
+      applyFiltersAndRender();
+      showToast(`Wastage loaded: ${rows.length} rows`, 'success');
+      if (unmappedWh.size) showToast(`⚠ ${unmappedWh.size} warehouse(s) not in allocation sheet`, 'error');
+      if (unmappedItems.size) showToast(`⚠ ${unmappedItems.size} item(s) not in category sheet`, 'error');
+      addNotif(`Wastage uploaded: ${name} (${rows.length} rows)`);
+    } catch (err) {
+      console.error(err);
+      showToast('Wastage failed: ' + err.message, 'error');
+    }
+  }
+
+  function getFilteredWastage() {
+    const selY = [...FilterState.year.selected].map(Number);
+    const selM = [...FilterState.month.selected].map(Number);
+    const selS = [...FilterState.store.selected];
+    const selA = [...FilterState.area.selected];
+    const selC = [...FilterState.category.selected];
+    const totY = FilterState.year.options.length, totM = FilterState.month.options.length;
+    const totS = FilterState.store.options.length, totA = FilterState.area.options.length;
+    const totC = FilterState.category.options.length;
+    const dF = dayFrom.value ? parseInt(dayFrom.value) : null;
+    const dT = dayTo.value ? parseInt(dayTo.value) : null;
+    return wastageData.filter(r => {
+      if (selY.length && selY.length !== totY && !selY.includes(r.year)) return false;
+      if (selM.length && selM.length !== totM && !selM.includes(r.month)) return false;
+      if (selS.length && selS.length !== totS && !selS.includes(r.storeCode)) return false;
+      if (selA.length && selA.length !== totA && !selA.includes(r.am)) return false;
+      if (selC.length && selC.length !== totC && !selC.includes(r.category)) return false;
+      if (dF != null && r.day != null && r.day < dF) return false;
+      if (dT != null && r.day != null && r.day > dT) return false;
+      if (globalSearchTerm) {
+        const s = `${r.storeName} ${r.storeCode} ${r.am} ${r.itemName} ${r.itemNo} ${r.category}`.toLowerCase();
+        if (!s.includes(globalSearchTerm)) return false;
+      }
+      return true;
+    });
+  }
+
+  function buildWastageIndex(wastage, sales) {
+    const salesIdx = new Map();
+    sales.forEach(r => {
+      if (!r.year || !r.month) return;
+      const k = `${r.storeCode}||${r.year}||${r.month}`;
+      salesIdx.set(k, (salesIdx.get(k) || 0) + r.net);
+    });
+    const wasteIdx = new Map();
+    wastage.forEach(r => {
+      if (!r.year || !r.month) return;
+      const k = `${r.storeCode}||${r.year}||${r.month}`;
+      const cur = wasteIdx.get(k) || { cost: 0, qty: 0, events: new Set(), byCat: {}, storeName: r.storeName, am: r.am, items: new Map() };
+      cur.cost += r.wastageCost;
+      cur.qty += r.qty;
+      cur.events.add(r.journId);
+      cur.byCat[r.category] = (cur.byCat[r.category] || 0) + r.wastageCost;
+      const ik = `${r.itemNo}||${r.itemName}`;
+      const it = cur.items.get(ik) || { itemNo: r.itemNo, itemName: r.itemName, category: r.category, qty: 0, price: r.price, cost: 0, events: new Set() };
+      it.qty += r.qty; it.cost += r.wastageCost; it.events.add(r.journId);
+      cur.items.set(ik, it);
+      wasteIdx.set(k, cur);
+    });
+    const out = [];
+    wasteIdx.forEach((w, k) => {
+      const [storeCode, y, m] = k.split('||');
+      const salesVal = salesIdx.get(k) || 0;
+      out.push({
+        storeCode, year: +y, month: +m,
+        storeName: w.storeName, am: w.am,
+        wastageCost: w.cost, wastageQty: w.qty,
+        events: w.events.size, byCat: w.byCat, items: w.items,
+        sales: salesVal,
+        wastagePct: salesVal > 0 ? w.cost / salesVal : null,
+      });
+    });
+    return out;
+  }
+
+  function pctClass(pct) {
+    if (pct == null) return '';
+    if (pct > 0.05) return 'high';
+    if (pct > 0.02) return 'medium';
+    return 'low';
+  }
+
+  function renderWastage() {
+    if (!wastageData.length) return;
+    const wFiltered = getFilteredWastage();
+    const idx = buildWastageIndex(wFiltered, filteredData);
+    renderWastageKPIs(idx, wFiltered);
+    renderWastageCharts(wFiltered, idx);
+    renderWastageTable(idx);
+  }
+
+  function renderWastageKPIs(idx, wFiltered) {
+    const totalCost = wFiltered.reduce((s, r) => s + r.wastageCost, 0);
+    const totalQty = wFiltered.reduce((s, r) => s + r.qty, 0);
+    const totalEvents = new Set(wFiltered.map(r => r.journId)).size;
+    const totalSales = filteredData.reduce((s, r) => s + r.net, 0);
+    const pct = totalSales > 0 ? totalCost / totalSales : null;
+    if ($('wKpiAmount')) $('wKpiAmount').textContent = fmtCur(totalCost);
+    if ($('wKpiAmountMeta')) $('wKpiAmountMeta').textContent = `${wFiltered.length} rows`;
+    if ($('wKpiPct')) $('wKpiPct').textContent = pct != null ? (pct * 100).toFixed(2) + '%' : '—';
+    if ($('wKpiPctMeta')) $('wKpiPctMeta').textContent = totalSales > 0 ? `of ${fmtCur(totalSales)} sales` : 'No sales';
+    if ($('wKpiPctCard')) $('wKpiPctCard').className = 'wastage-kpi-card' + (pct > 0.05 ? ' danger' : pct > 0.02 ? ' warn' : '');
+    if ($('wKpiQty')) $('wKpiQty').textContent = fmtNum(totalQty);
+    if ($('wKpiQtyMeta')) $('wKpiQtyMeta').textContent = 'units';
+    if ($('wKpiEvents')) $('wKpiEvents').textContent = fmtNum(totalEvents);
+    if ($('wKpiEventsMeta')) $('wKpiEventsMeta').textContent = 'JournIds';
+    const byCat = {};
+    wFiltered.forEach(r => { byCat[r.category] = (byCat[r.category] || 0) + r.wastageCost; });
+    const topCat = Object.entries(byCat).sort((a,b) => b[1] - a[1])[0];
+    if ($('wKpiTopCat')) $('wKpiTopCat').textContent = topCat ? topCat[0] : '—';
+    if ($('wKpiTopCatMeta')) $('wKpiTopCatMeta').textContent = topCat ? fmtCur(topCat[1]) : '';
+    const byStore = {};
+    wFiltered.forEach(r => { const k = r.storeCode + '||' + r.storeName; byStore[k] = (byStore[k] || 0) + r.wastageCost; });
+    const topStore = Object.entries(byStore).sort((a,b) => b[1] - a[1])[0];
+    if ($('wKpiTopStore')) $('wKpiTopStore').textContent = topStore ? (topStore[0].split('||')[1] || topStore[0].split('||')[0]) : '—';
+    if ($('wKpiTopStoreMeta')) $('wKpiTopStoreMeta').textContent = topStore ? fmtCur(topStore[1]) : '';
+  }
+
+  function renderWastageCharts(wFiltered, idx) {
+    const byCat = {};
+    wFiltered.forEach(r => { byCat[r.category] = (byCat[r.category] || 0) + r.wastageCost; });
+    const catEntries = Object.entries(byCat).sort((a,b) => b[1] - a[1]);
+    if (wastageCharts.category) wastageCharts.category.destroy();
+    const catColors = ['#dc2626','#ea580c','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f
 
   // ===== KPI UPDATE =====
   function updateKPIs(data) {

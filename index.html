@@ -1455,6 +1455,61 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
   }
 
+    // ===== KPI UPDATE =====
+  function updateKPIs(data) {
+    let sData = data;
+    if (lflOnly) { const s = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode)); sData = data.filter(r => s.has(r.storeCode)); }
+    const d25 = sData.filter(r => r.year === 2025), d26 = sData.filter(r => r.year === 2026);
+    const sum = (arr, k) => arr.reduce((s, r) => s + (r[k] || 0), 0);
+    const getDays = (arr) => { const d = new Set(); arr.forEach(r => { if (r.net > 0 && r.year && r.month && r.day) d.add(`${r.year}-${r.month}-${r.day}`); }); return d.size || 1; };
+    const aD25 = getDays(d25), aD26 = getDays(d26);
+    const rN25 = sum(d25, 'net'), rN26 = sum(d26, 'net'), rC25 = sum(d25, 'orders'), rC26 = sum(d26, 'orders');
+    const n25 = adsMode ? rN25 / aD25 : rN25, n26 = adsMode ? rN26 / aD26 : rN26;
+    const c25 = adsMode ? rC25 / aD25 : rC25, c26 = adsMode ? rC26 / aD26 : rC26;
+    const at25 = rC25 > 0 ? rN25 / rC25 : 0, at26 = rC26 > 0 ? rN26 / rC26 : 0;
+    const tm = buildTargetMap(rawData); window.__targetMaps = tm;
+    const yAll = [...new Set(sData.map(r => r.year).filter(y => y != null))];
+    const sY = yAll.includes(2026) ? 2026 : (yAll.length ? Math.max(...yAll) : null);
+    window.__salesYear = sY;
+    const sRows = sData.filter(r => r.year === sY);
+    const rawSNet = sum(sRows, 'net'), aDSalesY = getDays(sRows);
+    const sYNet = adsMode ? rawSNet / aDSalesY : rawSNet;
+    const tG = new Map();
+    sRows.forEach(r => { if (r.year == null || r.month == null) return; const k = `${r.storeCode}||${r.area}||${r.month}`; if (tG.has(k)) return; const g = computeGroupTarget(tm, sRows, sData, r.storeCode, r.area, r.year, r.month, false); tG.set(k, g.target); });
+    let fMT = 0; tG.forEach(v => fMT += v);
+    const tFY = adsMode ? fMT / aDSalesY : fMT;
+    renderCompValue('kpiTargetVs26', tFY > 0 ? sYNet / tFY : NaN, 'kpiTargetVs26Meta', tFY > 0 ? `Target: ${fmtCur(tFY)}  •  ${sY}: ${fmtCur(sYNet)}` : 'No target data');
+    renderCompValue('kpiSalesLfl', n25 > 0 ? n26 / n25 : NaN, 'kpiSalesLflMeta', n25 > 0 ? `2025: ${fmtCur(n25)}  •  2026: ${fmtCur(n26)}` : 'No data');
+    renderCompValue('kpiCcLfl', c25 > 0 ? c26 / c25 : NaN, 'kpiCcLflMeta', c25 > 0 ? `2025: ${fmtNum(c25)}  •  2026: ${fmtNum(c26)}` : 'No data');
+    renderCompValue('kpiAtLfl', at25 > 0 ? at26 / at25 : NaN, 'kpiAtLflMeta', at25 > 0 ? `2025: ${fmtAT(at25)}  •  2026: ${fmtAT(at26)}` : 'No data');
+
+    const ctx = getMonthContext();
+    const selS = [...FilterState.store.selected], selA = [...FilterState.area.selected];
+    const tS = FilterState.store.options.length, tA = FilterState.area.options.length;
+    const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
+    function pass(r) { if (selS.length && selS.length !== tS && !selS.includes(r.storeCode)) return false; if (selA.length && selA.length !== tA && !selA.includes(r.area)) return false; if (dF != null && r.day != null && r.day < dF) return false; if (dT != null && r.day != null && r.day > dT) return false; return true; }
+    const curR = sData.filter(r => r.year === ctx.curY && r.month === ctx.curM);
+    const prevR = rawData.filter(r => r.year === ctx.prevY && r.month === ctx.prevM).filter(pass).filter(r => !lflOnly || sData.some(sr => sr.storeCode === r.storeCode));
+    let cN = sum(curR, 'net'), pN = sum(prevR, 'net');
+    if (adsMode) { cN = cN / getDays(curR); pN = pN / getDays(prevR); }
+    const momR = pN > 0 ? cN / pN : NaN;
+    const curL = `${MONTHS[ctx.curM-1]} ${ctx.curY}`, prevL = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
+    $('kpiMomLabel').textContent = `MoM (${curL} vs ${prevL})`;
+    renderCompValue('kpiMomSales', momR, 'kpiMomSalesMeta', pN > 0 ? `${prevL}: ${fmtCur(pN)}  •  ${curL}: ${fmtCur(cN)}` : 'No data');
+
+    const monthly = new Map();
+    sData.filter(r => r.year === sY).forEach(r => { if (!r.month) return; if (!monthly.has(r.month)) monthly.set(r.month, 0); monthly.set(r.month, monthly.get(r.month) + r.net); });
+    const sparkData = [...monthly.entries()].sort((a,b) => a[0] - b[0]).slice(-6).map(([, v]) => v);
+    if (sparkTargetInst) sparkTargetInst.destroy();
+    if (sparkSalesInst) sparkSalesInst.destroy();
+    if (sparkData.length > 1) {
+      const opts = { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, animation: false };
+      sparkTargetInst = new Chart($('sparkTarget').getContext('2d'), { type: 'line', data: { labels: sparkData.map((_, i) => i), datasets: [{ data: sparkData, borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] }, options: opts });
+      sparkSalesInst = new Chart($('sparkSales').getContext('2d'), { type: 'line', data: { labels: sparkData.map((_, i) => i), datasets: [{ data: sparkData, borderColor: '#22c55e', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] }, options: opts });
+    }
+  }
+
+
   function applyFiltersAndRender() {
     if (!rawData || !rawData.length) return;
     const selY = [...FilterState.year.selected].map(Number), selM = [...FilterState.month.selected].map(Number);

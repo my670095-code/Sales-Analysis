@@ -1515,6 +1515,56 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
   $('lflToggle').addEventListener('click', () => { lflOnly = !lflOnly; $('lflToggle').classList.toggle('active', lflOnly); applyFiltersAndRender(); });
   dayFrom.addEventListener('change', () => applyFiltersAndRender());
   dayTo.addEventListener('change', () => applyFiltersAndRender());
+    $('wastageInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async evt => {
+      const buf = evt.target.result;
+      try { await IDB.saveWastage(file.name, buf, { size: file.size, type: file.type }); } catch (err) {}
+      processWastageWorkbook(buf, file.name, { savedAt: Date.now() });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  document.querySelectorAll('th[data-wsort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.wsort;
+      if (wastageSort.key === key) wastageSort.dir = wastageSort.dir === 'asc' ? 'desc' : 'asc';
+      else { wastageSort.key = key; wastageSort.dir = 'desc'; }
+      document.querySelectorAll('th[data-wsort]').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+      th.classList.add(wastageSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+      renderWastage();
+    });
+  });
+
+  $('wastageExportExcel').addEventListener('click', () => {
+    const wFiltered = getFilteredWastage();
+    if (!wFiltered.length) { showToast('No wastage data', 'error'); return; }
+    const idx = buildWastageIndex(wFiltered, filteredData);
+    const aoa = [['Store', 'Manager', 'Month', 'Wastage', 'Qty', 'Events', 'Net Sales', 'Wastage %', 'Top Category']];
+    idx.sort((a, b) => b.wastageCost - a.wastageCost).forEach(w => {
+      const topCat = Object.entries(w.byCat).sort((a, b) => b[1] - a[1])[0];
+      aoa.push([
+        w.storeName || w.storeCode, w.am, `${MONTHS[w.month - 1]} ${w.year}`,
+        Math.round(w.wastageCost), Math.round(w.wastageQty), w.events,
+        Math.round(w.sales),
+        w.wastagePct != null ? (w.wastagePct * 100).toFixed(2) + '%' : '',
+        topCat ? topCat[0] : ''
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Wastage');
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `Wastage_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Wastage Excel exported', 'success');
+  });
 
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
@@ -1750,67 +1800,230 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     if ($('wKpiTopStoreMeta')) $('wKpiTopStoreMeta').textContent = topStore ? fmtCur(topStore[1]) : '';
   }
 
-  function renderWastageCharts(wFiltered, idx) {
+ 
+
+
+
+   function renderWastageCharts(wFiltered, idx) {
+    // --- Category chart ---
     const byCat = {};
     wFiltered.forEach(r => { byCat[r.category] = (byCat[r.category] || 0) + r.wastageCost; });
-    const catEntries = Object.entries(byCat).sort((a,b) => b[1] - a[1]);
+    const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 10);
     if (wastageCharts.category) wastageCharts.category.destroy();
-    const catColors = ['#dc2626','#ea580c','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f
+    const catColors = ['#dc2626','#ea580c','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f6','#8b5cf6'];
+    wastageCharts.category = new Chart($('wastageCategoryChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: catEntries.map(e => e[0]),
+        datasets: [{
+          label: 'Wastage Amount',
+          data: catEntries.map(e => e[1]),
+          backgroundColor: catEntries.map((_, i) => catColors[i % catColors.length]),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmtCur(c.raw) } } },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => fmtNum(v) } } }
+      }
+    });
 
-  // ===== KPI UPDATE =====
-  function updateKPIs(data) {
-    let sData = data;
-    if (lflOnly) { const s = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode)); sData = data.filter(r => s.has(r.storeCode)); }
-    const d25 = sData.filter(r => r.year === 2025), d26 = sData.filter(r => r.year === 2026);
-    const sum = (arr, k) => arr.reduce((s, r) => s + (r[k] || 0), 0);
-    const getDays = (arr) => { const d = new Set(); arr.forEach(r => { if (r.net > 0 && r.year && r.month && r.day) d.add(`${r.year}-${r.month}-${r.day}`); }); return d.size || 1; };
-    const aD25 = getDays(d25), aD26 = getDays(d26);
-    const rN25 = sum(d25, 'net'), rN26 = sum(d26, 'net'), rC25 = sum(d25, 'orders'), rC26 = sum(d26, 'orders');
-    const n25 = adsMode ? rN25 / aD25 : rN25, n26 = adsMode ? rN26 / aD26 : rN26;
-    const c25 = adsMode ? rC25 / aD25 : rC25, c26 = adsMode ? rC26 / aD26 : rC26;
-    const at25 = rC25 > 0 ? rN25 / rC25 : 0, at26 = rC26 > 0 ? rN26 / rC26 : 0;
-    const tm = buildTargetMap(rawData); window.__targetMaps = tm;
-    const yAll = [...new Set(sData.map(r => r.year).filter(y => y != null))];
-    const sY = yAll.includes(2026) ? 2026 : (yAll.length ? Math.max(...yAll) : null);
-    window.__salesYear = sY;
-    const sRows = sData.filter(r => r.year === sY);
-    const rawSNet = sum(sRows, 'net'), aDSalesY = getDays(sRows);
-    const sYNet = adsMode ? rawSNet / aDSalesY : rawSNet;
-    const tG = new Map();
-    sRows.forEach(r => { if (r.year == null || r.month == null) return; const k = `${r.storeCode}||${r.area}||${r.month}`; if (tG.has(k)) return; const g = computeGroupTarget(tm, sRows, sData, r.storeCode, r.area, r.year, r.month, false); tG.set(k, g.target); });
-    let fMT = 0; tG.forEach(v => fMT += v);
-    const tFY = adsMode ? fMT / aDSalesY : fMT;
-    renderCompValue('kpiTargetVs26', tFY > 0 ? sYNet / tFY : NaN, 'kpiTargetVs26Meta', tFY > 0 ? `Target: ${fmtCur(tFY)}  •  ${sY}: ${fmtCur(sYNet)}` : 'No target data');
-    renderCompValue('kpiSalesLfl', n25 > 0 ? n26 / n25 : NaN, 'kpiSalesLflMeta', n25 > 0 ? `2025: ${fmtCur(n25)}  •  2026: ${fmtCur(n26)}` : 'No data');
-    renderCompValue('kpiCcLfl', c25 > 0 ? c26 / c25 : NaN, 'kpiCcLflMeta', c25 > 0 ? `2025: ${fmtNum(c25)}  •  2026: ${fmtNum(c26)}` : 'No data');
-    renderCompValue('kpiAtLfl', at25 > 0 ? at26 / at25 : NaN, 'kpiAtLflMeta', at25 > 0 ? `2025: ${fmtAT(at25)}  •  2026: ${fmtAT(at26)}` : 'No data');
+    // --- Monthly trend + % of sales ---
+    const monthMap = new Map();
+    wFiltered.forEach(r => {
+      const k = `${r.year}-${String(r.month).padStart(2, '0')}`;
+      if (!monthMap.has(k)) monthMap.set(k, { key: k, year: r.year, month: r.month, cost: 0, sales: 0 });
+      const m = monthMap.get(k);
+      m.cost += r.wastageCost;
+    });
+    filteredData.forEach(r => {
+      if (!r.year || !r.month) return;
+      const k = `${r.year}-${String(r.month).padStart(2, '0')}`;
+      if (monthMap.has(k)) monthMap.get(k).sales += r.net;
+    });
+    const mArr = [...monthMap.values()].sort((a, b) => a.key.localeCompare(b.key));
+    const mLabels = mArr.map(m => `${MONTHS[m.month - 1]} ${m.year}`);
+    const mCost = mArr.map(m => m.cost);
+    const mPct = mArr.map(m => m.sales > 0 ? (m.cost / m.sales * 100) : 0);
 
-    const ctx = getMonthContext();
-    const selS = [...FilterState.store.selected], selA = [...FilterState.area.selected];
-    const tS = FilterState.store.options.length, tA = FilterState.area.options.length;
-    const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
-    function pass(r) { if (selS.length && selS.length !== tS && !selS.includes(r.storeCode)) return false; if (selA.length && selA.length !== tA && !selA.includes(r.area)) return false; if (dF != null && r.day != null && r.day < dF) return false; if (dT != null && r.day != null && r.day > dT) return false; return true; }
-    const curR = sData.filter(r => r.year === ctx.curY && r.month === ctx.curM);
-    const prevR = rawData.filter(r => r.year === ctx.prevY && r.month === ctx.prevM).filter(pass).filter(r => !lflOnly || sData.some(sr => sr.storeCode === r.storeCode));
-    let cN = sum(curR, 'net'), pN = sum(prevR, 'net');
-    if (adsMode) { cN = cN / getDays(curR); pN = pN / getDays(prevR); }
-    const momR = pN > 0 ? cN / pN : NaN;
-    const curL = `${MONTHS[ctx.curM-1]} ${ctx.curY}`, prevL = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
-    $('kpiMomLabel').textContent = `MoM (${curL} vs ${prevL})`;
-    renderCompValue('kpiMomSales', momR, 'kpiMomSalesMeta', pN > 0 ? `${prevL}: ${fmtCur(pN)}  •  ${curL}: ${fmtCur(cN)}` : 'No data');
+    if (wastageCharts.monthly) wastageCharts.monthly.destroy();
+    wastageCharts.monthly = new Chart($('wastageMonthlyChart').getContext('2d'), {
+      data: {
+        labels: mLabels,
+        datasets: [
+          { type: 'bar', label: 'Wastage', data: mCost, backgroundColor: 'rgba(220,38,38,.75)', borderRadius: 6, yAxisID: 'y' },
+          { type: 'line', label: 'Wastage % of Sales', data: mPct, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.1)', tension: .3, borderWidth: 2.5, pointRadius: 3, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => c.dataset.type === 'line' ? `${c.dataset.label}: ${c.raw.toFixed(2)}%` : `${c.dataset.label}: ${fmtCur(c.raw)}` } }
+        },
+        scales: {
+          y: { type: 'linear', position: 'left', beginAtZero: true, ticks: { callback: v => fmtNum(v) }, title: { display: true, text: 'Wastage Cost', font: { size: 10 } } },
+          y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { callback: v => v + '%' }, title: { display: true, text: '% of Sales', font: { size: 10 } } }
+        }
+      }
+    });
 
-    const monthly = new Map();
-    sData.filter(r => r.year === sY).forEach(r => { if (!r.month) return; if (!monthly.has(r.month)) monthly.set(r.month, 0); monthly.set(r.month, monthly.get(r.month) + r.net); });
-    const sparkData = [...monthly.entries()].sort((a,b) => a[0] - b[0]).slice(-6).map(([, v]) => v);
-    if (sparkTargetInst) sparkTargetInst.destroy();
-    if (sparkSalesInst) sparkSalesInst.destroy();
-    if (sparkData.length > 1) {
-      const opts = { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, animation: false };
-      sparkTargetInst = new Chart($('sparkTarget').getContext('2d'), { type: 'line', data: { labels: sparkData.map((_, i) => i), datasets: [{ data: sparkData, borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] }, options: opts });
-      sparkSalesInst = new Chart($('sparkSales').getContext('2d'), { type: 'line', data: { labels: sparkData.map((_, i) => i), datasets: [{ data: sparkData, borderColor: '#22c55e', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] }, options: opts });
-    }
+    // --- Top 15 items ---
+    const itemMap = new Map();
+    wFiltered.forEach(r => {
+      const k = `${r.itemNo}||${r.itemName}`;
+      if (!itemMap.has(k)) itemMap.set(k, { name: r.itemName || r.itemNo, cost: 0, qty: 0 });
+      const it = itemMap.get(k);
+      it.cost += r.wastageCost;
+      it.qty += r.qty;
+    });
+    const topItems = [...itemMap.values()].sort((a, b) => b.cost - a.cost).slice(0, 15);
+
+    if (wastageCharts.items) wastageCharts.items.destroy();
+    wastageCharts.items = new Chart($('wastageTopItemsChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: topItems.map(i => i.name.length > 25 ? i.name.slice(0, 23) + '…' : i.name),
+        datasets: [{
+          label: 'Wastage Amount',
+          data: topItems.map(i => i.cost),
+          backgroundColor: 'rgba(220,38,38,.8)',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => `${fmtCur(c.raw)} · Qty: ${fmtNum(topItems[c.dataIndex].qty)}` } }
+        },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => fmtNum(v) } } }
+      }
+    });
   }
 
+  function renderWastageTable(idx) {
+    let rows = [...idx];
+    if (wastageSort.key) {
+      rows.sort((a, b) => {
+        let va, vb;
+        switch (wastageSort.key) {
+          case 'store': va = a.storeName || a.storeCode; vb = b.storeName || b.storeCode; break;
+          case 'am': va = a.am; vb = b.am; break;
+          case 'month': va = a.month; vb = b.month; break;
+          case 'cost': va = a.wastageCost; vb = b.wastageCost; break;
+          case 'qty': va = a.wastageQty; vb = b.wastageQty; break;
+          case 'events': va = a.events; vb = b.events; break;
+          case 'sales': va = a.sales; vb = b.sales; break;
+          case 'pct': va = a.wastagePct || 0; vb = b.wastagePct || 0; break;
+          default: va = 0; vb = 0;
+        }
+        if (typeof va === 'string') return wastageSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        return wastageSort.dir === 'asc' ? va - vb : vb - va;
+      });
+    } else {
+      rows.sort((a, b) => b.wastageCost - a.wastageCost);
+    }
+
+    const info = $('wastageRowInfo');
+    if (info) info.textContent = `${rows.length} store-month rows`;
+
+    if (!rows.length) {
+      $('wastageTableBody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-light);">No wastage matches filters.</td></tr>';
+      return;
+    }
+
+    let html = '';
+    let totCost = 0, totQty = 0, totEvents = 0, totSales = 0;
+    rows.forEach(w => {
+      totCost += w.wastageCost;
+      totQty += w.wastageQty;
+      totEvents += w.events;
+      totSales += w.sales;
+      const topCat = Object.entries(w.byCat).sort((a, b) => b[1] - a[1])[0];
+      const pctCls = pctClass(w.wastagePct);
+      html += `<tr class="store-clickable" data-wstore="${escapeAttr(w.storeCode)}" data-wmonth="${w.month}" data-wyear="${w.year}">
+        <td class="left-cell">${escapeHtml(w.storeName || w.storeCode)}</td>
+        <td class="left-cell">${escapeHtml(w.am)}</td>
+        <td>${MONTHS[w.month - 1]} ${w.year}</td>
+        <td class="cell-waste ${pctCls}">${fmtCur(w.wastageCost)}</td>
+        <td>${fmtNum(w.wastageQty)}</td>
+        <td>${fmtNum(w.events)}</td>
+        <td>${fmtCur(w.sales)}</td>
+        <td class="cell-waste ${pctCls}">${w.wastagePct != null ? (w.wastagePct * 100).toFixed(2) + '%' : '—'}</td>
+        <td class="left-cell">${topCat ? escapeHtml(topCat[0]) : '—'}</td>
+      </tr>`;
+    });
+    const totPct = totSales > 0 ? totCost / totSales : null;
+    html += `<tr class="subtotal-row">
+      <td class="left-cell">TOTAL</td><td></td><td></td>
+      <td>${fmtCur(totCost)}</td>
+      <td>${fmtNum(totQty)}</td>
+      <td>${fmtNum(totEvents)}</td>
+      <td>${fmtCur(totSales)}</td>
+      <td>${totPct != null ? (totPct * 100).toFixed(2) + '%' : '—'}</td>
+      <td></td>
+    </tr>`;
+    $('wastageTableBody').innerHTML = html;
+
+    $('wastageTableBody').querySelectorAll('tr[data-wstore]').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const code = tr.dataset.wstore;
+        const month = +tr.dataset.wmonth;
+        const year = +tr.dataset.wyear;
+        const rec = idx.find(w => w.storeCode === code && w.month === month && w.year === year);
+        if (rec) openWastageItemModal(rec);
+      });
+    });
+  }
+
+  function openWastageItemModal(rec) {
+    $('wModalTitle').textContent = `${rec.storeName || rec.storeCode} · ${MONTHS[rec.month - 1]} ${rec.year}`;
+    $('wModalSub').textContent = `Item-level wastage · ${fmtCur(rec.wastageCost)} total`;
+    const items = [...rec.items.values()].sort((a, b) => b.cost - a.cost);
+    let html = '';
+    items.forEach(it => {
+      html += `<tr>
+        <td>${escapeHtml(it.itemName || it.itemNo)}</td>
+        <td>${escapeHtml(it.category)}</td>
+        <td>${fmtNum(it.qty)}</td>
+        <td>${fmtCur(it.price)}</td>
+        <td>${fmtCur(it.cost)}</td>
+        <td>${it.events.size}</td>
+      </tr>`;
+    });
+    if (!html) html = '<tr><td colspan="6" class="modal-empty">No items</td></tr>';
+    $('wastageItemBody').innerHTML = html;
+    window.__currentWastageItems = items;
+    $('wastageItemModal').classList.add('open');
+  }
+
+  $('wModalClose').addEventListener('click', () => $('wastageItemModal').classList.remove('open'));
+  $('wastageItemModal').addEventListener('click', e => { if (e.target === $('wastageItemModal')) $('wastageItemModal').classList.remove('open'); });
+
+  $('wModalExportExcel').addEventListener('click', () => {
+    const items = window.__currentWastageItems || [];
+    const aoa = [['Item', 'Category', 'Qty', 'Price', 'Wastage Amount', 'Events']];
+    items.forEach(it => aoa.push([it.itemName || it.itemNo, it.category, it.qty, it.price, it.cost, it.events.size]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Items');
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `Wastage_Items_${Date.now()}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Wastage items exported', 'success');
+  });
   // ===== CHARTS =====
   function renderCharts(data) {
     const tm = window.__targetMaps || buildTargetMap(rawData);

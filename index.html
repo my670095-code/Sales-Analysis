@@ -1509,7 +1509,10 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       dayFrom.value = 1; dayTo.value = 31;
       applyFiltersAndRender();
 
-      if (name && uploadLabel) {    uploadLabel.textContent = 'Loaded';    uploadLabel.title = name; // Shows full filename on hover }
+           if (name && uploadLabel) {
+        uploadLabel.textContent = 'Loaded';
+        uploadLabel.title = name; // Shows full filename on hover
+      }
       showToast(`Loaded ${nStores} stores`, 'success');
       addNotif(`Uploaded ${name || 'file'} (${nStores} stores)`);
     } catch (err) {

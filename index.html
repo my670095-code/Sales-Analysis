@@ -1684,9 +1684,13 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
         const dt = parseDate(r['Date']);
         if (!dt) return;
         const itemNo = String(r['Item No.'] ?? '').trim();
-        const qty = Math.abs(Number(r['Qty']) || 0);
+                const qty = Math.abs(Number(r['Qty']) || 0);
         const price = Number(r['Price']) || 0;
-        const costRaw = Number(r['Warehouse']) || 0;
+        
+        // Check for a specific cost column (adjust the string 'Cost' to match your Excel header if needed)
+        const costRaw = Number(r['Cost'] || r['Total Cost'] || r['Amount']) || 0; 
+        
+        // Fallback to calculating it if the specific cost column is empty
         const cost = costRaw !== 0 ? Math.abs(costRaw) : Math.abs(qty * price);
         const cat = itemCategoryMap.get(itemNo);
         if (!cat) unmappedItems.add(itemNo);

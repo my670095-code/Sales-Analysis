@@ -1678,48 +1678,56 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
       const unmappedWh = new Set(), unmappedItems = new Set();
       const rows = [];
-      dataRows.forEach(r => {
-        const wh = String(r['Warehouse'] ?? '').trim();
-        if (!wh) return;
-        const dt = parseDate(r['Date']);
-        if (!dt) return;
-        const itemNo = String(r['Item No.'] ?? '').trim();
-                const qty = Math.abs(Number(r['Qty']) || 0);
-        const price = Number(r['Price']) || 0;
-        
-        // Check for a specific cost column (adjust the string 'Cost' to match your Excel header if needed)
-             const costRaw = Number(r['Cost'] || r['Total Cost'] || r['Amount']) || 0; 
-        const cost = costRaw !== 0 ? Math.abs(costRaw) : Math.abs(qty * price);
-        const cat = itemCategoryMap.get(itemNo);
-        if (!cat) unmappedItems.add(itemNo);
-        const alloc = warehouseAllocMap.get(wh);
-        if (!alloc) unmappedWh.add(wh);
-        
-        // FIX: Convert 'S11-266' to '266' to match Sales data
-        let finalStoreCode = alloc && alloc.storeCode ? alloc.storeCode : wh;
-        if (finalStoreCode && finalStoreCode.includes('-')) {
-            finalStoreCode = finalStoreCode.split('-')[1]; 
-        }
+   dataRows.forEach(r => {
+  // Read by column position (A=0, B=1, C=2, ..., H=7)
+  const journRaw = r[0];
+  const dateRaw  = r[1];
+  const whRaw    = r[2];   // store code (S11-266)
+  const itemRaw  = r[3];
+  const nameRaw  = r[4];
+  const qtyRaw   = r[5];
+  const priceRaw = r[6];
+  const costRaw  = r[7];   // the actual cost column (was overwritten by the dup header)
 
-        rows.push({
-  journId: r['JournId'],
-  date: dt,
-  ymd: `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`,
-  year: dt.getFullYear(),
-  month: dt.getMonth() + 1,
-  day: dt.getDate(),
-  dow: dt.getDay(),
-  warehouse: wh,
-  storeCode: finalStoreCode,
-  storeName: alloc ? alloc.storeName : '',
-  am: alloc ? alloc.am : 'Unmapped',
-  itemNo: itemNo,
-  itemName: String(r['Item Name'] || '').trim(),
-  qty: qty,
-  price: price,
-  wastageCost: cost,
-  category: cat ? cat.category : 'UNMAPPED',
-  uom: cat ? cat.uom : '',
+  const wh = String(whRaw ?? '').trim();
+  if (!wh) return;
+  const dt = parseDate(dateRaw);
+  if (!dt) return;
+
+  const itemNo = String(itemRaw ?? '').trim();
+  const qty    = Math.abs(Number(qtyRaw)   || 0);
+  const price  = Math.abs(Number(priceRaw) || 0);
+  const cost   = Math.abs(Number(costRaw)  || 0) || (qty * price);
+
+  const cat = itemCategoryMap.get(itemNo);
+  if (!cat) unmappedItems.add(itemNo);
+
+  const alloc = warehouseAllocMap.get(wh);
+  if (!alloc) unmappedWh.add(wh);
+
+  let finalStoreCode = alloc && alloc.storeCode ? alloc.storeCode : wh;
+  if (finalStoreCode && finalStoreCode.includes('-')) finalStoreCode = finalStoreCode.split('-')[1];
+
+  rows.push({
+    journId: journRaw,
+    date: dt,
+    ymd: `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`,
+    year: dt.getFullYear(),
+    month: dt.getMonth() + 1,
+    day: dt.getDate(),
+    dow: dt.getDay(),
+    warehouse: wh,
+    storeCode: finalStoreCode,
+    storeName: alloc ? alloc.storeName : '',
+    am: alloc ? alloc.am : 'Unmapped',
+    itemNo,
+    itemName: String(nameRaw || '').trim(),
+    qty,
+    price,
+    wastageCost: cost,
+    category: cat ? cat.category : 'UNMAPPED',
+    uom: cat ? cat.uom : '',
+  });
 });
       });
 

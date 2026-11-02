@@ -970,6 +970,10 @@ const $ = id => document.getElementById(id);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const WEEKEND_CLOSED = new Set(['312','251','278','247','284','214','308','231','266','194','246','156','101','294','122','72','234','242']);
+  // Create background overlay for mobile globally so switchTab can access it
+const overlay = document.createElement('div');
+overlay.className = 'sidebar-overlay';
+document.body.appendChild(overlay);
 
 function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escapeAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -1030,7 +1034,6 @@ $('langBtn').addEventListener('click', () => {
   showToast(`Language: ${currentLang === 'ar' ? 'العربية' : 'English'}`, 'info');
 });
 
-// ===== TABS =====
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
@@ -1038,21 +1041,21 @@ function switchTab(tabName) {
   const target = $(sectionIds[tabName]);
   if (target) target.classList.add('active');
   
-  // Hide main KPI panel if wastage tab is active
+  // Hide KPI panel if wastage tab is active
   if (tabName === 'wastage') {
     $('kpiPanel').style.display = 'none';
   } else if (window.__rawData && window.__rawData.length > 0) {
     $('kpiPanel').style.display = 'grid';
   }
 
-  // --- ADD THIS BLOCK TO AUTO-CLOSE SIDEBAR ON MOBILE ---
+  // --- AUTO CLOSE SIDEBAR ON MOBILE ---
   if (window.innerWidth <= 1024) {
     const sidebar = document.getElementById('mainSidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('active');
   }
-  // ------------------------------------------------------
+  // ------------------------------------
   
   if (window.__filteredData && window.__filteredData.length > 0) {
     if (tabName === 'insights') { renderInsights(window.__filteredData); renderExecutiveSummary(window.__filteredData); }
@@ -3077,10 +3080,6 @@ const sidebar = $('mainSidebar');
 const dashboardContainer = document.querySelector('.dashboard');
 const sidebarToggleBtn = $('sidebarToggle');
 
-// Create background overlay for mobile
-const overlay = document.createElement('div');
-overlay.className = 'sidebar-overlay';
-document.body.appendChild(overlay);
 
 function toggleSidebar() {
   if (window.innerWidth <= 1024) {

@@ -1048,13 +1048,17 @@ function switchTab(tabName) {
     $('kpiPanel').style.display = 'grid';
   }
 
-  // --- AUTO CLOSE SIDEBAR ON MOBILE ---
-  if (window.innerWidth <= 1024) {
-    const sidebar = document.getElementById('mainSidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (overlay) overlay.classList.remove('active');
+  // --- AUTO CLOSE SIDEBAR ON ALL SCREENS ---
+  const sidebar = document.getElementById('mainSidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  const dashboard = document.querySelector('.dashboard');
+  
+  if (sidebar) {
+    sidebar.classList.remove('open');       // Closes mobile
+    sidebar.classList.add('collapsed');     // Closes desktop
   }
+  if (overlay) overlay.classList.remove('active'); // Hides background overlay
+  if (dashboard) dashboard.classList.add('expanded'); // Expands dashboard to fill space
   // ------------------------------------
   
   if (window.__filteredData && window.__filteredData.length > 0) {

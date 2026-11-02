@@ -1674,61 +1674,64 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
       const dataSheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
       if (!dataSheet) throw new Error('Sheet "Data" not found');
-      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { defval: null, raw: true });
+      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { header: 1, defval: null, raw: true });
 
       const unmappedWh = new Set(), unmappedItems = new Set();
       const rows = [];
-   dataRows.forEach(r => {
-  // Read by column position (A=0, B=1, C=2, ..., H=7)
-  const journRaw = r[0];
-  const dateRaw  = r[1];
-  const whRaw    = r[2];   // store code (S11-266)
-  const itemRaw  = r[3];
-  const nameRaw  = r[4];
-  const qtyRaw   = r[5];
-  const priceRaw = r[6];
-  const costRaw  = r[7];   // the actual cost column (was overwritten by the dup header)
+         dataRows.forEach(r => {
+        // Skip empty rows or the header row
+        if (!r || r.length === 0 || String(r[0]).trim() === 'JournId') return;
 
-  const wh = String(whRaw ?? '').trim();
-  if (!wh) return;
-  const dt = parseDate(dateRaw);
-  if (!dt) return;
+        const journRaw = r[0];       // Column A
+        const dateRaw  = r[1];       // Column B
+        const whRaw    = r[2];       // Column C
+        const itemRaw  = r[3];       // Column D
+        const nameRaw  = r[4];       // Column E
+        const qtyRaw   = r[5];       // Column F
+        const priceRaw = r[6];       // Column G
+        const costRaw  = r[7];       // Column H
 
-  const itemNo = String(itemRaw ?? '').trim();
-  const qty    = Math.abs(Number(qtyRaw)   || 0);
-  const price  = Math.abs(Number(priceRaw) || 0);
-  const cost   = Math.abs(Number(costRaw)  || 0) || (qty * price);
+        const wh = String(whRaw ?? '').trim();
+        if (!wh) return;
 
-  const cat = itemCategoryMap.get(itemNo);
-  if (!cat) unmappedItems.add(itemNo);
+        const dt = parseDate(dateRaw);
+        if (!dt) return;
 
-  const alloc = warehouseAllocMap.get(wh);
-  if (!alloc) unmappedWh.add(wh);
+        const itemNo = String(itemRaw ?? '').trim();
+        const qty    = Math.abs(Number(qtyRaw)   || 0);
+        const price  = Math.abs(Number(priceRaw) || 0);
+        const cost   = Math.abs(Number(costRaw)  || 0) || (qty * price);
 
-  let finalStoreCode = alloc && alloc.storeCode ? alloc.storeCode : wh;
-  if (finalStoreCode && finalStoreCode.includes('-')) finalStoreCode = finalStoreCode.split('-')[1];
+        const cat = itemCategoryMap.get(itemNo);
+        if (!cat) unmappedItems.add(itemNo);
 
-  rows.push({
-    journId: journRaw,
-    date: dt,
-    ymd: `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`,
-    year: dt.getFullYear(),
-    month: dt.getMonth() + 1,
-    day: dt.getDate(),
-    dow: dt.getDay(),
-    warehouse: wh,
-    storeCode: finalStoreCode,
-    storeName: alloc ? alloc.storeName : '',
-    am: alloc ? alloc.am : 'Unmapped',
-    itemNo,
-    itemName: String(nameRaw || '').trim(),
-    qty,
-    price,
-    wastageCost: cost,
-    category: cat ? cat.category : 'UNMAPPED',
-    uom: cat ? cat.uom : '',
-  });
-});
+        const alloc = warehouseAllocMap.get(wh);
+        if (!alloc) unmappedWh.add(wh);
+
+        let finalStoreCode = alloc && alloc.storeCode ? alloc.storeCode : wh;
+        if (finalStoreCode && finalStoreCode.includes('-')) finalStoreCode = finalStoreCode.split('-')[1];
+
+        rows.push({
+          journId: journRaw,
+          date: dt,
+          ymd: `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`,
+          year: dt.getFullYear(),
+          month: dt.getMonth() + 1,
+          day: dt.getDate(),
+          dow: dt.getDay(),
+          warehouse: wh,
+          storeCode: finalStoreCode,
+          storeName: alloc ? alloc.storeName : '',
+          am: alloc ? alloc.am : 'Unmapped',
+          itemNo,
+          itemName: String(nameRaw || '').trim(),
+          qty,
+          price,
+          wastageCost: cost,
+          category: cat ? cat.category : 'UNMAPPED',
+          uom: cat ? cat.uom : '',
+        });
+      });
     
 
       wastageData = rows;

@@ -1324,7 +1324,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
   let adsMode = false, lflOnly = false, currentSort = { key: null, dir: 'desc' };
 
-  const fileInput = $('fileInput'), fileName = $('fileName'), fileMeta = $('fileMeta');
+  const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
   const filterBar = $('filterBar'), kpiPanel = $('kpiPanel'), chartsPanel = $('chartsPanel'), tablePanel = $('tablePanel');
   const emptyState = $('emptyState'), loadingState = $('loadingState'), errorBox = $('errorBox'), errorText = $('errorText');
@@ -1509,7 +1509,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       dayFrom.value = 1; dayTo.value = 31;
       applyFiltersAndRender();
 
-      if (name) { fileName.textContent = name; fileMeta.textContent = `${fmtBytes(buffer.byteLength)} • ${fmtSavedAgo(meta?.savedAt || Date.now())}`; }
+      if (name && uploadLabel) {    uploadLabel.textContent = 'Loaded';    uploadLabel.title = name; // Shows full filename on hover }
       showToast(`Loaded ${nStores} stores`, 'success');
       addNotif(`Uploaded ${name || 'file'} (${nStores} stores)`);
     } catch (err) {
@@ -1875,10 +1875,11 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
       window.__wastageUnmapped = { warehouses: unmappedWh, items: unmappedItems };
       wastageFileName = name;
       wastageFileBuffer = buffer;
-
-      const wFn = $('wastageFileName'), wMeta = $('wastageFileMeta');
-      if (wFn) wFn.textContent = name;
-      if (wMeta) wMeta.textContent = `${fmtBytes(buffer.byteLength)} • ${rows.length} rows`;
+const wastageLabel = $('wastageUploadLabel');
+if (wastageLabel) {
+    wastageLabel.textContent = 'Loaded';
+    wastageLabel.title = name;
+}
       if ($('wastageKpiGrid')) $('wastageKpiGrid').style.display = 'grid';
       if ($('wastageChartsGrid')) $('wastageChartsGrid').style.display = 'grid';
       if ($('wastageTablePanel')) $('wastageTablePanel').style.display = 'block';

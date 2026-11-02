@@ -1240,18 +1240,35 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
   function isFormula(v) { if (v == null) return false; const s = String(v).trim(); return s.startsWith('=') || s.includes('#REF!') || s.includes('#N/A') || s.includes('#VALUE!'); }
   function cleanText(v, fb) { if (v == null) return fb; let s = String(v).trim(); if (!s) return fb; if (isFormula(s)) return fb; s = s.replace(/\s+/g,' '); const m = s.match(/^(.+?)\s*-\s*([^-]+)$/); if (m) { const h = m[1].trim(), t = m[2].trim(); if (h.endsWith(t)) s = h; } return s; }
   function deriveStoreCode(c, name) { if (c != null && !isFormula(c)) { const m = String(c).trim().match(/^(\d+)/); if (m) return m[1]; } const m2 = String(name || '').match(/^\s*(\d+)/); return m2 ? m2[1] : String(name || 'Unknown'); }
-  function parseDate(v) {
-    if (v == null || v === '') return null;
-    if (v instanceof Date && !isNaN(v)) return v;
-    if (typeof v === 'number') { const d = new Date(Math.round((v - 25569) * 86400 * 1000)); return isNaN(d) ? null : d; }
-    if (typeof v === 'string') {
-      const s = v.trim(); if (!s) return null;
-      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
-      m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return new Date(parseInt(m[3]), parseInt(m[1])-1, parseInt(m[2]));
-      const d = new Date(s); return isNaN(d) ? null : d;
-    }
-    return null;
+ function parseDate(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === 'number') {
+    // Excel serial date. 25569 = days from 1900-01-01 to 1970-01-01
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return isNaN(d) ? null : d;
   }
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s) return null;
+    // yyyy-mm-dd (with or without time)
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    // m/d/yyyy
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return new Date(parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]));
+    // ISO fallback
+    const d = new Date(s);
+    if (!isNaN(d)) return d;
+    // numeric string fallback (e.g., "46037")
+    const n = Number(s);
+    if (isFinite(n) && n > 20000 && n < 80000) {
+      const serial = new Date(Math.round((n - 25569) * 86400 * 1000));
+      if (!isNaN(serial)) return serial;
+    }
+  }
+  return null;
+}
   function toYMD(d) { if (!d) return ''; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function renderCompValue(id, ratio, metaId, metaText) {
     const el = $(id); if (!el) return;
@@ -1674,7 +1691,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
       const dataSheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
       if (!dataSheet) throw new Error('Sheet "Data" not found');
-      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { header: 1, defval: null, raw: true });
+      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
 
       const unmappedWh = new Set(), unmappedItems = new Set();
       const rows = [];

@@ -1831,6 +1831,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     renderWastageCharts(wFiltered, idx);
     renderWastageTable(idx);
   }
+    window.renderWastage = renderWastage;
 
   function renderWastageKPIs(idx, wFiltered) {
     const totalCost = wFiltered.reduce((s, r) => s + r.wastageCost, 0);

@@ -1524,13 +1524,26 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     reader.readAsArrayBuffer(file);
   });
 
-  (async function() {
+   (async function() {
     try {
+      // 1. Try to load the Sales Data
       const saved = await IDB.load();
-      if (!saved) { emptyState.style.display = 'block'; return; }
-      loadingState.style.display = 'flex'; emptyState.style.display = 'none';
-      setTimeout(() => processWorkbook(saved.buffer, saved.name, { savedAt: saved.savedAt }), 30);
-    } catch(e) { emptyState.style.display = 'block'; }
+      if (!saved) { emptyState.style.display = 'block'; } 
+      else {
+        loadingState.style.display = 'flex'; emptyState.style.display = 'none';
+        setTimeout(() => processWorkbook(saved.buffer, saved.name, { savedAt: saved.savedAt }), 30);
+      }
+
+      // 2. Try to load the Wastage Data
+      const savedWastage = await IDB.loadWastage();
+      if (savedWastage) {
+        // Wait a tiny bit to make sure the DOM/HTML is fully ready
+        setTimeout(() => processWastageWorkbook(savedWastage.buffer, savedWastage.name, { savedAt: savedWastage.savedAt }), 100);
+      }
+    } catch(e) { 
+      console.error(e);
+      emptyState.style.display = 'block'; 
+    }
   })();
 
   function populateFilters(data) {

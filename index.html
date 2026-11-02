@@ -1701,7 +1701,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
       const dataSheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
       if (!dataSheet) throw new Error('Sheet "Data" not found');
-      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+      const dataRows = XLSX.utils.sheet_to_json(dataSheet, { header: 1, defval: null, raw: true, dateNF: 'yyyy-mm-dd' });
 
       const unmappedWh = new Set(), unmappedItems = new Set();
       const rows = [];

@@ -1038,6 +1038,13 @@ function switchTab(tabName) {
   const target = $(sectionIds[tabName]);
   if (target) target.classList.add('active');
   
+  // ADD THIS LINE: Hide KPI panel if wastage tab is active
+  if (tabName === 'wastage') {
+    $('kpiPanel').style.display = 'none';
+  } else if (window.__rawData && window.__rawData.length > 0) {
+    $('kpiPanel').style.display = 'grid';
+  }
+  
   if (window.__filteredData && window.__filteredData.length > 0) {
     if (tabName === 'insights') { renderInsights(window.__filteredData); renderExecutiveSummary(window.__filteredData); }
     if (tabName === 'leaderboard') renderLeaderboard(window.__filteredData);
@@ -1045,7 +1052,7 @@ function switchTab(tabName) {
     if (tabName === 'table') renderTable(window.__filteredData);
     if (tabName === 'overview') renderCharts(window.__filteredData);
     if (tabName === 'yoy') renderYoY(window.__filteredData);
-        if (tabName === 'wastage') renderWastage();
+    if (tabName === 'wastage') renderWastage();
   } else {
     showToast('Please upload a file first', 'info');
   }

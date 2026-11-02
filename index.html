@@ -66,13 +66,74 @@
     .upload-area .file-info { display: flex; flex-direction: column; max-width: 100px; margin-right: 6px; overflow: hidden; }
     .upload-area .file-info span { color: var(--text-muted); font-size: .75rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .upload-area .file-info small { color: var(--text-light); font-size: .65rem; }
-
-    /* ===== TABS ===== */
-    .tabs-bar { display: flex; gap: 4px; background: var(--surface); border-radius: 14px; padding: 5px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow-x: auto; }
+    /* ===== NAVIGATION BAR ===== */
+    .tabs-bar { 
+      display: flex; 
+      gap: 6px; 
+      background: var(--surface); 
+      border-radius: 14px; 
+      padding: 6px; 
+      margin-bottom: 16px; 
+      box-shadow: var(--shadow); 
+      border: 1px solid var(--border); 
+      overflow-x: auto; 
+      /* Removed flex spreading, now items group naturally */
+      justify-content: flex-start; 
+    }
+    
     .tabs-bar::-webkit-scrollbar { display: none; }
-    .tab-btn { flex: 1 0 auto; padding: 9px 18px; border-radius: 10px; border: none; background: transparent; color: var(--text-muted); font-weight: 600; font-size: .85rem; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: .2s; white-space: nowrap; }
-    .tab-btn:hover { color: var(--text-main); background: var(--surface-hover); }
-    .tab-btn.active { background: var(--primary); color: #fff; }
+    
+    .tab-btn { 
+      padding: 10px 20px; 
+      border-radius: 10px; 
+      border: none; 
+      background: transparent; 
+      color: var(--text-muted); 
+      font-weight: 600; 
+      font-size: .85rem; 
+      cursor: pointer; 
+      font-family: inherit; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 8px; 
+      transition: all .2s ease; 
+      white-space: nowrap; 
+      /* Removed flex: 1 0 auto to stop stretching */
+      flex: 0 0 auto; 
+    }
+    
+    .tab-btn:hover { 
+      color: var(--text-main); 
+      background: var(--surface-hover); 
+    }
+    
+    .tab-btn.active { 
+      background: var(--primary); 
+      color: #fff; 
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); /* Added subtle shadow to active tab */
+    }
+
+    /* Specific fix for the Wastage tab to match the nav style */
+    .tab-btn.wastage-tab.active { 
+      background: var(--waste); 
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    /* Responsive adjustment for smaller screens */
+    @media (max-width: 768px) {
+      .tabs-bar {
+        justify-content: space-between; /* Spread evenly only on mobile */
+      }
+      .tab-btn {
+        flex: 1 0 auto; /* Allow stretching on small screens */
+        padding: 8px 12px;
+        font-size: .75rem;
+      }
+      .tab-btn i {
+        display: none; /* Hide icons on mobile to save space */
+      }
+    }
 
     /* ===== SEARCH ===== */
     .search-bar { position: relative; flex: 1 1 100px; max-width: 250px; min-width: 100px; }

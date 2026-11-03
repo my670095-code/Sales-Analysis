@@ -2805,7 +2805,8 @@ if (wLookup) {
     if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
     const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
     html += `<tr class="subtotal-row">
-      <td colspan="5" class="left-cell">Subtotal (${rows.length} rows)</td>
+      <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
+      <td></td>
       <td class="cell-2025">${Math.round(avg25)}</td>
       <td class="cell-2025">${fmtCur(sDN25)}</td>
       <td class="cell-2025">${fmtNum(sDO25)}</td>
@@ -2821,7 +2822,6 @@ if (wLookup) {
       <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
       <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
        <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-        <td></td>
    <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
    <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
    <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>

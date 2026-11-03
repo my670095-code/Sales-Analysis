@@ -2414,24 +2414,19 @@ if (wastageLabel) {
     const stACls = totalAtPct >= 0 ? 'cell-positive' : 'cell-negative';
     const stPct = sDN26 > 0 ? (st.wasteCost / sDN26) : 0;
     
-    html += `<tr class="subtotal-row">
-      <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
-      <td class="cell-2025">${Math.round(avg25)}</td>
-      <td class="cell-2025">${fmtCur(sDN25)}</td>
-      <td class="cell-2025">${fmtNum(sDO25)}</td>
-      <td class="cell-2025">${fmtAT(stAt25)}</td>
-      <td class="cell-prev">${Math.round(avgp)}</td>
-      <td class="cell-prev">${fmtCur(sDpN)}</td>
-      <td class="cell-prev">${fmtNum(sDpO)}</td>
-      <td class="cell-prev">${fmtAT(stPrevOrders > 0 ? stPrevNet / stPrevOrders : 0)}</td>
-      <td class="cell-2026 ${stCls}">${Math.round(avg26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
-      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
-      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
-      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-        
+     html += `<tr class="subtotal-row">
+      <td class="left-cell">TOTAL</td>
+      <td class="cell-2025">${fmtCur(totalLY_sales)}</td>
+      <td class="cell-2025">${fmtNum(totalLY_cc)}</td>
+      <td class="cell-2025">${fmtAT(totalLY_at)}</td>
+      <td class="cell-2025">${totalLY_days}</td>
+      <td class="cell-2026">${fmtCur(totalTY_sales)}</td>
+      <td class="cell-2026">${fmtNum(totalTY_cc)}</td>
+      <td class="cell-2026">${fmtAT(totalTY_at)}</td>
+      <td class="cell-2026">${totalTY_days}</td>
+      <td class="cell-ratios ${stSCls}">${totalSalesPct >= 0 ? '+' : ''}${totalSalesPct.toFixed(1)}%</td>
+      <td class="cell-ratios ${stCCls}">${totalCcPct >= 0 ? '+' : ''}${totalCcPct.toFixed(1)}%</td>
+      <td class="cell-ratios ${stACls}">${totalAtPct >= 0 ? '+' : ''}${totalAtPct.toFixed(1)}%</td>
     </tr>`;
     
     $('yoyTableBody').innerHTML = html;

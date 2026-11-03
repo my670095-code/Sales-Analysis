@@ -2412,19 +2412,28 @@ if (wastageLabel) {
     const stSCls = totalSalesPct >= 0 ? 'cell-positive' : 'cell-negative';
     const stCCls = totalCcPct >= 0 ? 'cell-positive' : 'cell-negative';
     const stACls = totalAtPct >= 0 ? 'cell-positive' : 'cell-negative';
+    const stPct = sDN26 > 0 ? (st.wasteCost / sDN26) : 0;
+    
     html += `<tr class="subtotal-row">
-      <td class="left-cell">TOTAL</td>
-      <td class="cell-2025">${fmtCur(totalLY_sales)}</td>
-      <td class="cell-2025">${fmtNum(totalLY_cc)}</td>
-      <td class="cell-2025">${fmtAT(totalLY_at)}</td>
-      <td class="cell-2025">${totalLY_days}</td>
-      <td class="cell-2026">${fmtCur(totalTY_sales)}</td>
-      <td class="cell-2026">${fmtNum(totalTY_cc)}</td>
-      <td class="cell-2026">${fmtAT(totalTY_at)}</td>
-      <td class="cell-2026">${totalTY_days}</td>
-      <td class="cell-ratios ${stSCls}">${totalSalesPct >= 0 ? '+' : ''}${totalSalesPct.toFixed(1)}%</td>
-      <td class="cell-ratios ${stCCls}">${totalCcPct >= 0 ? '+' : ''}${totalCcPct.toFixed(1)}%</td>
-      <td class="cell-ratios ${stACls}">${totalAtPct >= 0 ? '+' : ''}${totalAtPct.toFixed(1)}%</td>
+      <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
+      <td class="cell-2025">${Math.round(avg25)}</td>
+      <td class="cell-2025">${fmtCur(sDN25)}</td>
+      <td class="cell-2025">${fmtNum(sDO25)}</td>
+      <td class="cell-2025">${fmtAT(stAt25)}</td>
+      <td class="cell-prev">${Math.round(avgp)}</td>
+      <td class="cell-prev">${fmtCur(sDpN)}</td>
+      <td class="cell-prev">${fmtNum(sDpO)}</td>
+      <td class="cell-prev">${fmtAT(stPrevOrders > 0 ? stPrevNet / stPrevOrders : 0)}</td>
+      <td class="cell-2026 ${stCls}">${Math.round(avg26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
+      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
+      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
+      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+      <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
+      <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
+      <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
     </tr>`;
     
     $('yoyTableBody').innerHTML = html;
@@ -2717,7 +2726,7 @@ function renderTable(data) {
   } else rows.sort((a, b) => b.net2026 - a.net2026);
   if (lflOnly) rows = rows.filter(g => g.net2025 > 0);
 
-  const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0 };
+  const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
   let html = '';
   rows.forEach(g => {
     const rawAt25 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
@@ -2726,6 +2735,11 @@ function renderTable(data) {
     if (adsMode) { const dy25 = g.days2025 > 0 ? g.days2025 : 1, dy26 = g.days2026 > 0 ? g.days2026 : 1; dN25 = g.net2025 / dy25; dO25 = g.orders2025 / dy25; dA25 = rawAt25; dN26 = g.net2026 / dy26; dO26 = g.orders2026 / dy26; dA26 = rawAt26; dT = g.target / (g.days2026 > 0 ? g.days2026 : 1); }
     else { dN25 = g.net2025; dO25 = g.orders2025; dA25 = rawAt25; dN26 = g.net2026; dO26 = g.orders2026; dA26 = rawAt26; dT = g.target; }
     st.target += g.target; st.net2025 += g.net2025; st.orders2025 += g.orders2025; st.net2026 += g.net2026; st.orders2026 += g.orders2026;
+    const wLookup = wMap.get(`${g.storeCode}||${g.month}`);
+if (wLookup) {
+  st.wasteCost += wLookup.wastageCost || 0;
+  st.wasteQty += wLookup.wastageQty || 0;
+}
     const p = prevMap.get(`${g.storeCode}||${g.area}`) || { net: 0, orders: 0, activeDays: 0 };
     const prevAt = p.orders > 0 ? p.net / p.orders : 0;
     let dpN = p.net, dpO = p.orders;

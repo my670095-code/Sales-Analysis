@@ -2804,9 +2804,8 @@ if (wLookup) {
     let stCls = '';
     if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
     const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
-    html += `<tr class="subtotal-row">
+     html += `<tr class="subtotal-row">
       <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
-      <td></td>
       <td class="cell-2025">${Math.round(avg25)}</td>
       <td class="cell-2025">${fmtCur(sDN25)}</td>
       <td class="cell-2025">${fmtNum(sDO25)}</td>

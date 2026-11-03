@@ -2431,9 +2431,7 @@ if (wastageLabel) {
       <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
       <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
       <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-           <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
-      <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
-      <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
+        
     </tr>`;
     
     $('yoyTableBody').innerHTML = html;
@@ -2810,6 +2808,7 @@ if (wLookup) {
     const stMom = fmtSignedPct(sDpN > 0 ? (sDN26 / sDpN) : NaN);
     let stCls = '';
     if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
+    const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
     html += `<tr class="subtotal-row">
       <td colspan="4" class="left-cell">Subtotal (${rows.length} rows)</td>
       <td class="cell-2025">${Math.round(avg25)}</td>
@@ -2826,8 +2825,11 @@ if (wLookup) {
       <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
       <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
       <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
-      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-    </tr>`;
+       <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+   <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
+   <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
+   <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
+ </tr>`;
   }
   if (!rows.length) html = '<tr><td colspan="22" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
   $('tableBody').innerHTML = html;

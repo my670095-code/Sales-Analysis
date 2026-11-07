@@ -966,7 +966,7 @@
         </div>
 
         <!-- ADDED: CHART VIEW -->
-        <div id="modalChartView" style="display:block; padding: 20px; height: 400px;">
+        <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
           <canvas id="storeDayChart"></canvas>
         </div>
 
@@ -3400,13 +3400,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
     
-    // Open the modal FIRST (so container has size)
+    // Open the modal
     document.getElementById('storeDayModal').classList.add('open');
-
-    // THEN render the chart — this ensures Chart.js can measure the canvas correctly
-    setTimeout(() => {
-        window.renderStoreDayChart();
-    }, 50);
+    
+    // Reset to table view when modal opens
+    document.getElementById('modalTableView').style.display = 'block';
+    document.getElementById('modalChartView').style.display = 'none';
+    document.getElementById('viewModeTableBtn').classList.add('active');
+    document.getElementById('viewModeChartBtn').classList.remove('active');
 
     document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
       const v = btn.dataset.modalDow;

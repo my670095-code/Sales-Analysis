@@ -3289,14 +3289,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let fullMonthTarget = 0;
     try {
-       // Try to find target in the maps
        if (tm.exact) {
          fullMonthTarget = tm.exact.get(`${codeStr}||${area}||${curY}||${curM}`) || 0;
        }
        if (!fullMonthTarget && tm.byCodeYearMonth) {
          fullMonthTarget = tm.byCodeYearMonth.get(`${codeStr}||${curY}||${curM}`) || 0;
        }
-       // Fallback: Calculate from raw data directly
        if (!fullMonthTarget) {
            const targetRows = rawData.filter(r => r.storeCode === storeCode && r.year === curY && r.month === curM && r.target > 0);
            if (targetRows.length > 0) {
@@ -3307,7 +3305,20 @@ document.addEventListener('DOMContentLoaded', () => {
        }
     } catch(e) { console.error('Target lookup error:', e); }
     
-    const perDayT = vDays > 0 ? fullMonthTarget / vDays : 0;
+    // FIX 1: Prorated target for the selected day range
+    const dF = dayFrom.value ? parseInt(dayFrom.value) : null;
+    const dT = dayTo.value ? parseInt(dayTo.value) : null;
+    let selectedValidDays = 0;
+    const minDay = dF !== null ? dF : 1;
+    const maxDay = dT !== null ? dT : dim;
+    
+    for (let d = minDay; d <= maxDay; d++) {
+        const dt = new Date(curY, curM - 1, d);
+        const dow = dt.getDay();
+        if (!isClosed || (dow !== 5 && dow !== 6)) selectedValidDays++;
+    }
+    const perDayT = selectedValidDays > 0 ? (fullMonthTarget / vDays) : 0;
+    const periodTarget = perDayT * selectedValidDays;
 
     // --- Wastage Data ---
     let storeWastage = [];
@@ -3323,10 +3334,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return dMap.get(d); 
     };
 
-    // Map Sales
+    // FIX 2: Apply Day filter to the loop mapping Current (2026) and Last Year (2025) data
     filteredData.forEach(r => {
       if (String(r.storeCode).trim() !== codeStr || (area && r.area !== area)) return;
       if (r.day == null || r.month !== curM) return;
+      if (dF !== null && r.day < dF) return;
+      if (dT !== null && r.day > dT) return;
       if (!r.dob || !dowAllowed(r.dob)) return;
       const b = ensure(r.day);
       if (r.year === 2025) { b.d2025 += r.net; b.o2025 += r.orders; }
@@ -3336,16 +3349,20 @@ document.addEventListener('DOMContentLoaded', () => {
     rawData.forEach(r => {
       if (String(r.storeCode).trim() !== codeStr || (area && r.area !== area)) return;
       if (r.year !== prevY || r.month !== prevM || r.day == null) return;
+      if (dF !== null && r.day < dF) return;
+      if (dT !== null && r.day > dT) return;
       if (!r.dob || !dowAllowed(r.dob)) return;
       const b = ensure(r.day); b.dPrev += r.net; b.oPrev += r.orders;
     });
 
-    // Map Wastage
+    // FIX 3: Map Wastage correctly (using raw keys 'qty' and 'wastageCost')
     storeWastage.forEach(w => {
+      if (dF !== null && w.day < dF) return;
+      if (dT !== null && w.day > dT) return;
       if (!dowAllowed(new Date(w.year, w.month-1, w.day))) return;
       const b = ensure(w.day);
-      b.wCost += w.wastageCost;
-      b.wQty += w.wastageQty;
+      b.wCost += w.wastageCost || 0;
+      b.wQty += (w.qty !== undefined ? w.qty : (w.wastageQty || 0));
     });
 
     const allD = [...dMap.keys()].sort((a, b) => a - b);
@@ -3353,13 +3370,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!allD.length) { modalDayBody.innerHTML = '<tr><td colspan="16" class="modal-empty">No data</td></tr>'; document.getElementById('storeDayModal').classList.add('open'); return; }
     
-    const minD = allD[0], maxD = allD[allD.length - 1];
+    const minDisplayDay = allD[0], maxDisplayDay = allD[allD.length - 1];
     const tot = { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
     
     let html = '';
     const chartLabels = [], chartSales = [], chartAdt = [], chartAt = [], chartWaste = [];
 
-    for (let d = minD; d <= maxD; d++) {
+    for (let d = minDisplayDay; d <= maxDisplayDay; d++) {
       const b = dMap.get(d) || { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
       const at25 = b.o2025 > 0 ? b.d2025 / b.o2025 : 0, atP = b.oPrev > 0 ? b.dPrev / b.oPrev : 0, at26 = b.o2026 > 0 ? b.d2026 / b.o2026 : 0;
       
@@ -3403,7 +3420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const stLfl = fmtSignedPct(tot.d2025 > 0 ? (tot.d2026 / tot.d2025) : NaN);
-    const stTgt = fmtSignedPct(fullMonthTarget > 0 ? (tot.d2026 / fullMonthTarget) : NaN);
+    const stTgt = fmtSignedPct(periodTarget > 0 ? (tot.d2026 / periodTarget) : NaN);
     const stMom = fmtSignedPct(tot.dPrev > 0 ? (tot.d2026 / tot.dPrev) : NaN);
     const stPct = tot.d2026 > 0 ? (tot.wCost / tot.d2026 * 100) : 0;
     const stCls = (tot.d2025 > 0 || tot.d2026 > 0) ? (tot.d2026 >= tot.d2025 ? 'cell-positive' : 'cell-negative') : '';
@@ -3431,10 +3448,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
     
-    // Open the modal
     document.getElementById('storeDayModal').classList.add('open');
-    
-    // Reset to table view when modal opens
     document.getElementById('modalTableView').style.display = 'block';
     document.getElementById('modalChartView').style.display = 'none';
     document.getElementById('viewModeTableBtn').classList.add('active');

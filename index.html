@@ -966,7 +966,7 @@
         </div>
 
         <!-- ADDED: CHART VIEW -->
-        <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
+        <div id="modalChartView" style="display:block; padding: 20px; height: 400px;">
           <canvas id="storeDayChart"></canvas>
         </div>
 
@@ -3400,11 +3400,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
     
-    // Render chart ONLY if the chart view is currently visible
-    const viewChart = document.getElementById('modalChartView');
-    if (viewChart && viewChart.style.display !== 'none') {
-        window.renderStoreDayChart();
-    }
+    // Always render the chart (so it's ready when user toggles to Chart view)
+    window.renderStoreDayChart();
 
     document.getElementById('storeDayModal').classList.add('open');
 
@@ -3469,20 +3466,20 @@ document.addEventListener('DOMContentLoaded', () => {
         btnChart.classList.remove('active');
       });
     
-      btnChart.addEventListener('click', () => {
+       btnChart.addEventListener('click', () => {
         viewTable.style.display = 'none';
         viewChart.style.display = 'block';
         btnChart.classList.add('active');
         btnTable.classList.remove('active');
         
-        // Wait a tiny bit for the DOM to update, then render the chart
+        // Re-render after container is visible
         setTimeout(() => {
           if (storeDayChartInstance) {
             storeDayChartInstance.destroy();
             storeDayChartInstance = null;
           }
           window.renderStoreDayChart();
-        }, 50);
+        }, 100);
       });
   }
 });

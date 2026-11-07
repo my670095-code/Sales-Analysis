@@ -2876,7 +2876,8 @@ if (wLookup) {
   if (!rows.length) html = '<tr><td colspan="22" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
   $('tableBody').innerHTML = html;
   $('tableBody').querySelectorAll('tr.store-clickable').forEach(tr => {
-    tr.addEventListener('click', () => openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
+    // Use window.openStoreDayModal so it always calls the override function
+    tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
   });
 }
   // ===== MODAL =====
@@ -3490,31 +3491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  // ===== CRITICAL FIX: Rebind store row click handlers to use the NEW openStoreDayModal =====
-  function rebindStoreClickHandlers() {
-    const tableBody = document.getElementById('tableBody');
-    if (!tableBody) return;
-    tableBody.querySelectorAll('tr.store-clickable').forEach(tr => {
-      // Remove any old listeners by cloning
-      const newTr = tr.cloneNode(true);
-      tr.parentNode.replaceChild(newTr, tr);
-      newTr.addEventListener('click', () => {
-        window.openStoreDayModal(newTr.dataset.storeCode, newTr.dataset.storeArea);
-      });
-    });
-  }
 
-  // Override renderTable to rebind handlers after each render
-  const originalRenderTable = window.renderTable;
-  // Poll for the table body being rendered and rebind
-  const observer = new MutationObserver(() => {
-    rebindStoreClickHandlers();
-  });
-  const tb = document.getElementById('tableBody');
-  if (tb) observer.observe(tb, { childList: true });
-
-  // Also rebind on initial load
-  setTimeout(rebindStoreClickHandlers, 500);
 });
 </script>
 </body>

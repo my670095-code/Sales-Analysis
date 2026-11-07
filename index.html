@@ -905,10 +905,10 @@
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
           
-          <!-- ADDED: View Toggle -->
-          <div style="display:flex; background:var(--bg); border-radius:8px; padding:2px; margin-right:8px;">
-            <button class="toggle-btn active" id="viewModeTableBtn" style="padding:4px 10px; border:none; background:transparent; font-size:.75rem; height:auto; box-shadow:none;">Table</button>
-            <button class="toggle-btn" id="viewModeChartBtn" style="padding:4px 10px; border:none; background:transparent; font-size:.75rem; height:auto; box-shadow:none;">Chart</button>
+               <!-- ADDED: View Toggle -->
+          <div style="display:flex; background:var(--bg); border-radius:8px; padding:4px; margin-right:8px; border: 1px solid var(--border-strong);">
+            <button class="btn btn-primary" id="viewModeTableBtn" style="padding:6px 14px; border:none; font-size:.8rem; height:auto; border-radius:6px; box-shadow:none; font-weight:700;">Table</button>
+            <button class="btn btn-outline" id="viewModeChartBtn" style="padding:6px 14px; border:none; background:transparent; font-size:.8rem; height:auto; border-radius:6px; box-shadow:none; color:var(--text-muted);">Chart</button>
           </div>
 
           <button class="export-btn excel" id="modalExportExcel"><i class="fas fa-file-excel"></i> Excel</button>
@@ -3511,37 +3511,65 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('storeDayChart');
     if (!canvas) return;
 
-    // Define what datasets to show based on the selected metric
     let datasets = [];
     let yAxisTitle = '';
 
     if (currentChartMetric === 'sales') {
       yAxisTitle = 'Sales';
       datasets = [
-        { label: '2025', data: currentModalData.sales2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
-        { label: 'Prev Month', data: currentModalData.salesPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
-        { label: '2026', data: currentModalData.sales2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+        { label: '2025', data: currentModalData.sales2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: 'Prev Month', data: currentModalData.salesPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026', data: currentModalData.sales2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026 Trend', data: currentModalData.sales2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
       ];
     } else if (currentChartMetric === 'adt') {
       yAxisTitle = 'Transactions (ADT)';
       datasets = [
-        { label: '2025 CC', data: currentModalData.adt2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
-        { label: 'Prev Month CC', data: currentModalData.adtPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
-        { label: '2026 CC', data: currentModalData.adt2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+        { label: '2025 CC', data: currentModalData.adt2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: 'Prev Month CC', data: currentModalData.adtPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026 CC', data: currentModalData.adt2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026 Trend', data: currentModalData.adt2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
       ];
     } else if (currentChartMetric === 'at') {
       yAxisTitle = 'Avg Ticket (AT)';
       datasets = [
-        { label: '2025 AT', data: currentModalData.at2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
-        { label: 'Prev Month AT', data: currentModalData.atPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
-        { label: '2026 AT', data: currentModalData.at2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+        { label: '2025 AT', data: currentModalData.at2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: 'Prev Month AT', data: currentModalData.atPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026 AT', data: currentModalData.at2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
+        { label: '2026 Trend', data: currentModalData.at2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
       ];
     } else if (currentChartMetric === 'waste') {
       yAxisTitle = 'Wastage Amount';
       datasets = [
-        { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4 }
+        { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4, barPercentage: 0.6 },
+        { label: 'Trend', data: currentModalData.waste, type: 'line', borderColor: '#991b1b', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
       ];
     }
+
+    // Custom plugin to draw text on top of bars
+    const valueLabelsPlugin = {
+      id: 'valueLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        ctx.save();
+        chart.data.datasets.forEach((dataset, i) => {
+          if (dataset.type === 'line') return;
+          const meta = chart.getDatasetMeta(i);
+          meta.data.forEach((element, index) => {
+            const data = dataset.data[index];
+            if (data > 0) {
+              ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#1e293b';
+              ctx.font = 'bold 10px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
+              ctx.fillText(valText, element.x, element.y - 4);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    };
 
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
       type: 'bar',
@@ -3574,7 +3602,8 @@ document.addEventListener('DOMContentLoaded', () => {
         scales: {
           y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: yAxisTitle, font: {size: 10} } }
         }
-      }
+      },
+      plugins: [valueLabelsPlugin]
     });
   };
   // Toggle Listeners
@@ -3587,15 +3616,31 @@ document.addEventListener('DOMContentLoaded', () => {
       btnTable.addEventListener('click', () => {
         viewTable.style.display = 'block';
         viewChart.style.display = 'none';
-        btnTable.classList.add('active');
-        btnChart.classList.remove('active');
+        
+        // Brighten Table Button
+        btnTable.classList.add('btn-primary');
+        btnTable.classList.remove('btn-outline');
+        btnTable.style.color = '';
+        
+        // Dim Chart Button
+        btnChart.classList.remove('btn-primary');
+        btnChart.classList.add('btn-outline');
+        btnChart.style.color = 'var(--text-muted)';
       });
     
        btnChart.addEventListener('click', () => {
         viewTable.style.display = 'none';
         viewChart.style.display = 'block';
-        btnChart.classList.add('active');
-        btnTable.classList.remove('active');
+        
+        // Brighten Chart Button
+        btnChart.classList.add('btn-primary');
+        btnChart.classList.remove('btn-outline');
+        btnChart.style.color = '';
+        
+        // Dim Table Button
+        btnTable.classList.remove('btn-primary');
+        btnTable.classList.add('btn-outline');
+        btnTable.style.color = 'var(--text-muted)';
         
         // Re-render after container is visible
         setTimeout(() => {

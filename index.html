@@ -1288,7 +1288,20 @@ function renderOptions(key) {
       if (FilterState[key].selected.has(v)) FilterState[key].selected.delete(v);
       else FilterState[key].selected.add(v);
       renderOptions(key); updateChipLabel(key);
-      if (key === 'area') rebuildStoreOptionsFromManagers();
+         if (key === 'area') rebuildStoreOptionsFromManagers();
+      
+      // AUTO-FILL DAY RANGE
+      if (key === 'month') {
+        const selM = [...FilterState.month.selected].map(Number);
+        // If exactly one month is selected, update the days
+        if (selM.length === 1) {
+          const targetM = selM[0];
+          const maxDay = getMaxDayForMonth(2026, targetM);
+          $('dayFrom').value = 1;
+          $('dayTo').value = maxDay;
+        }
+      }
+
       if (window.applyFiltersAndRender) window.applyFiltersAndRender();
     });
   });
@@ -1331,6 +1344,15 @@ document.querySelectorAll('[data-all]').forEach(btn => btn.addEventListener('cli
   FilterState[key].selected = new Set(FilterState[key].options.map(o => o.value));
   renderOptions(key); updateChipLabel(key);
   if (key === 'area') rebuildStoreOptionsFromManagers();
+  
+  if (key === 'month') {
+    const selM = [...FilterState.month.selected].map(Number);
+    if (selM.length === 1) {
+       const maxDay = getMaxDayForMonth(2026, selM[0]);
+       $('dayFrom').value = 1; $('dayTo').value = maxDay;
+    }
+  }
+  
   if (window.applyFiltersAndRender) window.applyFiltersAndRender();
 }));
 document.querySelectorAll('[data-none]').forEach(btn => btn.addEventListener('click', e => {
@@ -1339,6 +1361,15 @@ document.querySelectorAll('[data-none]').forEach(btn => btn.addEventListener('cl
   FilterState[key].selected.clear();
   renderOptions(key); updateChipLabel(key);
   if (key === 'area') rebuildStoreOptionsFromManagers();
+  
+  if (key === 'month') {
+    const selM = [...FilterState.month.selected].map(Number);
+    if (selM.length === 1) {
+       const maxDay = getMaxDayForMonth(2026, selM[0]);
+       $('dayFrom').value = 1; $('dayTo').value = maxDay;
+    }
+  }
+  
   if (window.applyFiltersAndRender) window.applyFiltersAndRender();
 }));
 document.addEventListener('click', e => {
@@ -1430,6 +1461,11 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     let prevM = curM - 1, prevY = curY;
     if (prevM < 1) { prevM = 12; prevY = curY - 1; }
     return { curM, prevM, curY, prevY };
+  }
+    function getMaxDayForMonth(targetYear, targetMonth) {
+    const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
+    if (!rows.length) return 31; // Fallback if no data found
+    return Math.max(...rows.map(r => r.day));
   }
   function buildTargetMap(rows) {
     const buckets = new Map();
@@ -1655,6 +1691,14 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     masterAllOptions.dow = FilterState.dow.options.slice();
 
     ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+    
+    // Set initial day range based on the latest month present
+    if (months.length > 0) {
+      const latestMonth = Math.max(...months);
+      const maxDay = getMaxDayForMonth(2026, latestMonth);
+      if (document.getElementById('dayFrom')) document.getElementById('dayFrom').value = 1;
+      if (document.getElementById('dayTo')) document.getElementById('dayTo').value = maxDay;
+    }
   }
 
     // ===== KPI UPDATE =====

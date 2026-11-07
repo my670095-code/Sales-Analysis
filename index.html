@@ -1570,23 +1570,27 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     try {
       // 1. Try to load the Sales Data
       const saved = await IDB.load();
+      
       if (!saved) { 
+        // FIX: Explicitly show empty state and HIDE loading spinner
         emptyState.style.display = 'block'; 
-        loadingState.style.display = 'none'; // <-- ADD THIS LINE TO HIDE THE SPINNER
-      } 
-      else {
-        loadingState.style.display = 'flex'; emptyState.style.display = 'none';
+        loadingState.style.display = 'none'; 
+      } else {
+        // Show loading spinner while processing saved data
+        loadingState.style.display = 'flex'; 
+        emptyState.style.display = 'none';
         setTimeout(() => processWorkbook(saved.buffer, saved.name, { savedAt: saved.savedAt }), 30);
       }
 
       // 2. Try to load the Wastage Data
       const savedWastage = await IDB.loadWastage();
       if (savedWastage) {
-        // Wait a tiny bit to make sure the DOM/HTML is fully ready
         setTimeout(() => processWastageWorkbook(savedWastage.buffer, savedWastage.name, { savedAt: savedWastage.savedAt }), 100);
       }
     } catch(e) { 
-      console.error(e);
+      console.error("IDB Load Error:", e);
+      // FIX: If it crashes, hide the spinner and show an error or empty state
+      loadingState.style.display = 'none'; 
       emptyState.style.display = 'block'; 
     }
   })();

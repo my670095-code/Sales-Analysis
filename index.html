@@ -831,7 +831,8 @@
       <div class="table-header-bar">
         <h3><i class="fas fa-table"></i> Detailed Performance</h3>
         <div class="table-controls">
-          <button class="toggle-btn lfl-toggle" id="lflToggle"><i class="fas fa-filter"></i> LFL Only</button>
+        <button class="toggle-btn lfl-toggle" id="lflToggle"><i class="fas fa-filter"></i> LFL Only</button>
+<button class="toggle-btn" id="newStoreToggle" style="color: #8b5cf6; border-color: #8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
           <button class="toggle-btn" id="adsToggle"><i class="fas fa-calculator"></i> ADS</button>
           <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
           <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
@@ -1322,7 +1323,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 (function() {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
-  let adsMode = false, lflOnly = false, currentSort = { key: null, dir: 'desc' };
+  let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
 
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
@@ -1706,7 +1707,19 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
   });
 
   $('adsToggle').addEventListener('click', () => { adsMode = !adsMode; $('adsToggle').classList.toggle('active', adsMode); applyFiltersAndRender(); });
-  $('lflToggle').addEventListener('click', () => { lflOnly = !lflOnly; $('lflToggle').classList.toggle('active', lflOnly); applyFiltersAndRender(); });
+ $('lflToggle').addEventListener('click', () => { 
+  lflOnly = !lflOnly; 
+  $('lflToggle').classList.toggle('active', lflOnly); 
+  if(lflOnly && newStoreOnly) { newStoreOnly = false; $('newStoreToggle').classList.remove('active'); }
+  applyFiltersAndRender(); 
+});
+
+$('newStoreToggle').addEventListener('click', () => { 
+  newStoreOnly = !newStoreOnly; 
+  $('newStoreToggle').classList.toggle('active', newStoreOnly); 
+  if(newStoreOnly && lflOnly) { lflOnly = false; $('lflToggle').classList.remove('active'); }
+  applyFiltersAndRender(); 
+});
   dayFrom.addEventListener('change', () => applyFiltersAndRender());
   dayTo.addEventListener('change', () => applyFiltersAndRender());
     $('wastageInput').addEventListener('change', e => {
@@ -2717,7 +2730,14 @@ function renderTable(data) {
       return currentSort.dir === 'asc' ? va - vb : vb - va;
     });
   } else rows.sort((a, b) => b.net2026 - a.net2026);
-  if (lflOnly) rows = rows.filter(g => g.net2025 > 0);
+ if (lflOnly) {
+  rows = rows.filter(g => g.net2025 > 0);
+} else if (newStoreOnly) {
+  // Find all stores that had sales in 2025
+  const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
+  // Keep only stores that are NOT in that list
+  rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
+}
 
   const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
   let html = '';

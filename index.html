@@ -3214,7 +3214,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const fmtCur = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
     const fmtNum = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
     const fmtAT = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
-    const fmtSignedPct = r => { if (!isFinite(r) || r === 0) return { text: '—', cls: '' }; const d = (r-1)*100, s = d >= 0 ? '+' : '', c = d >= 0 ? 'pct-up' : 'pct-down'; return { text: `${s}${d.toFixed(1)}%`, cls: c }; };
+    const fmtSignedPct = r => { 
+      if (!isFinite(r) || r === 0) return { text: '—', cls: '' }; 
+      const d = (r-1)*100, s = d >= 0 ? '+' : '', c = d >= 0 ? 'pct-up' : 'pct-down'; 
+      return { text: `${s}${d.toFixed(1)}%`, cls: c }; 
+    };
     
     // Get Context (Current & Previous Month)
     const selM = [...FilterState.month.selected].map(Number);
@@ -3240,30 +3244,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDowSet = window.__modalDow;
     const dowAllowed = d => modalDowSet.size === 0 || modalDowSet.has(d.getDay());
 
-    // Target Calculation
+    // --- Target Calculation ---
     let vDays = 0;
-    const isClosed = (typeof WEEKEND_CLOSED !== 'undefined') && WEEKEND_CLOSED.has(String(storeCode));
+    const codeStr = String(storeCode).trim();
+    const isClosed = (typeof WEEKEND_CLOSED !== 'undefined') && WEEKEND_CLOSED.has(codeStr);
+    
     const dim = daysInMonth(curY, curM);
     for (let d = 1; d <= dim; d++) { 
       const dt = new Date(curY, curM - 1, d); 
       const dow = dt.getDay(); 
       if (!isClosed || (dow !== 5 && dow !== 6)) vDays++; 
     }
-    // Safely get target
+    
     let fullMonthTarget = 0;
     try {
-       const tCode = tm.exact?.get(`${storeCode}||${area}||${curY}||${curM}`) || tm.byCodeYearMonth?.get(`${storeCode}||${curY}||${curM}`) || 0;
-       fullMonthTarget = tCode;
-    } catch(e) {}
+       // Try to find target in the maps
+       if (tm.exact) {
+         fullMonthTarget = tm.exact.get(`${codeStr}||${area}||${curY}||${curM}`) || 0;
+       }
+       if (!fullMonthTarget && tm.byCodeYearMonth) {
+         fullMonthTarget = tm.byCodeYearMonth.get(`${codeStr}||${curY}||${curM}`) || 0;
+       }
+       // Fallback: Calculate from raw data directly
+       if (!fullMonthTarget) {
+           const targetRows = rawData.filter(r => r.storeCode === storeCode && r.year === curY && r.month === curM && r.target > 0);
+           if (targetRows.length > 0) {
+               const perDay = new Map();
+               targetRows.forEach(r => perDay.set(r.day, Math.max(perDay.get(r.day)||0, r.target)));
+               fullMonthTarget = [...perDay.values()].reduce((a,b) => a+b, 0);
+           }
+       }
+    } catch(e) { console.error('Target lookup error:', e); }
+    
     const perDayT = vDays > 0 ? fullMonthTarget / vDays : 0;
 
-    // Wastage
+    // --- Wastage Data ---
     let storeWastage = [];
     try {
         if (typeof getFilteredWastage === 'function') {
-            storeWastage = getFilteredWastage().filter(w => w.storeCode === storeCode && w.month === curM);
+            storeWastage = getFilteredWastage().filter(w => String(w.storeCode).trim() === codeStr && w.month === curM && w.year === curY);
         }
-    } catch(e) {}
+    } catch(e) { console.error('Wastage lookup error:', e); }
 
     const dMap = new Map();
     const ensure = d => { 
@@ -3273,7 +3294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Map Sales
     filteredData.forEach(r => {
-      if (r.storeCode !== storeCode || (area && r.area !== area)) return;
+      if (String(r.storeCode).trim() !== codeStr || (area && r.area !== area)) return;
       if (r.day == null || r.month !== curM) return;
       if (!r.dob || !dowAllowed(r.dob)) return;
       const b = ensure(r.day);
@@ -3282,7 +3303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     rawData.forEach(r => {
-      if (r.storeCode !== storeCode || (area && r.area !== area)) return;
+      if (String(r.storeCode).trim() !== codeStr || (area && r.area !== area)) return;
       if (r.year !== prevY || r.month !== prevM || r.day == null) return;
       if (!r.dob || !dowAllowed(r.dob)) return;
       const b = ensure(r.day); b.dPrev += r.net; b.oPrev += r.orders;
@@ -3378,7 +3399,12 @@ document.addEventListener('DOMContentLoaded', () => {
     modalDayBody.innerHTML = html;
 
     currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
-    window.renderStoreDayChart();
+    
+    // Render chart ONLY if the chart view is currently visible
+    const viewChart = document.getElementById('modalChartView');
+    if (viewChart && viewChart.style.display !== 'none') {
+        window.renderStoreDayChart();
+    }
 
     document.getElementById('storeDayModal').classList.add('open');
 
@@ -3396,9 +3422,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.renderStoreDayChart = function() {
     if (!currentModalData) return;
-    if (storeDayChartInstance) storeDayChartInstance.destroy();
+    if (storeDayChartInstance) { storeDayChartInstance.destroy(); storeDayChartInstance = null; }
+    
     const canvas = document.getElementById('storeDayChart');
     if (!canvas) return;
+
+    // Ensure the container has a size
+    const container = document.getElementById('modalChartView');
+    if (!container || container.offsetWidth === 0) {
+        // If hidden, don't render yet
+        return;
+    }
 
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
       type: 'bar',
@@ -3445,10 +3479,15 @@ document.addEventListener('DOMContentLoaded', () => {
         viewChart.style.display = 'block';
         btnChart.classList.add('active');
         btnTable.classList.remove('active');
-        // Fix chart sizing issue when toggling from display:none
-        if (storeDayChartInstance) {
-            storeDayChartInstance.resize();
-        }
+        
+        // Wait a tiny bit for the DOM to update, then render the chart
+        setTimeout(() => {
+          if (storeDayChartInstance) {
+            storeDayChartInstance.destroy();
+            storeDayChartInstance = null;
+          }
+          window.renderStoreDayChart();
+        }, 50);
       });
   }
 });

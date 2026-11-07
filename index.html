@@ -3187,7 +3187,6 @@ function toggleSidebar() {
 sidebarToggleBtn.addEventListener('click', toggleSidebar);
 overlay.addEventListener('click', toggleSidebar);
 
-// Reset layout on window resize
 window.addEventListener('resize', () => {
   if (window.innerWidth > 1024) {
     overlay.classList.remove('active');
@@ -3197,6 +3196,7 @@ window.addEventListener('resize', () => {
     dashboardContainer.classList.remove('expanded');
   }
 });
+</script>
 <script>
 // ===== OVERRIDE: STORE DAY MODAL WITH WASTAGE & CHART =====
 document.addEventListener('DOMContentLoaded', () => {

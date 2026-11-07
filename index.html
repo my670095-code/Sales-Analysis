@@ -965,9 +965,20 @@
           </table>
         </div>
 
-        <!-- ADDED: CHART VIEW -->
+              <!-- ADDED: CHART VIEW -->
         <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
-          <canvas id="storeDayChart"></canvas>
+          
+          <!-- NEW: Chart Comparison Toggles -->
+          <div style="display:flex; gap:8px; margin-bottom:15px; justify-content:center; flex-wrap:wrap;" id="chartMetricToggles">
+            <button class="btn btn-outline chart-toggle active" data-metric="sales" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">Sales</button>
+            <button class="btn btn-outline chart-toggle" data-metric="adt" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">ADT</button>
+            <button class="btn btn-outline chart-toggle" data-metric="at" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">AT</button>
+            <button class="btn btn-outline chart-toggle" data-metric="waste" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">Wastage</button>
+          </div>
+
+          <div style="position:relative; height: calc(100% - 50px); width: 100%;">
+             <canvas id="storeDayChart"></canvas>
+          </div>
         </div>
 
       </div>
@@ -3374,7 +3385,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tot = { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
     
     let html = '';
-    const chartLabels = [], chartSales = [], chartAdt = [], chartAt = [], chartWaste = [];
+    const chartLabels = [], chartWaste = [];
+    const chartSales2025 = [], chartSalesPrev = [], chartSales2026 = [];
+    const chartAdt2025 = [], chartAdtPrev = [], chartAdt2026 = [];
+    const chartAt2025 = [], chartAtPrev = [], chartAt2026 = [];
 
     for (let d = minDisplayDay; d <= maxDisplayDay; d++) {
       const b = dMap.get(d) || { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
@@ -3393,10 +3407,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const cellCls = (b.d2025 > 0 || b.d2026 > 0) ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
       const wasteCls = wPct > 5 ? 'high' : wPct > 2 ? 'medium' : 'low';
 
-      chartLabels.push(`Day ${d}`);
-      chartSales.push(b.d2026);
-      chartAdt.push(b.o2026);
-      chartAt.push(at26);
+         chartLabels.push(`Day ${d}`);
+      
+      chartSales2025.push(b.d2025);
+      chartSalesPrev.push(b.dPrev);
+      chartSales2026.push(b.d2026);
+      
+      chartAdt2025.push(b.o2025);
+      chartAdtPrev.push(b.oPrev);
+      chartAdt2026.push(b.o2026);
+      
+      chartAt2025.push(at25);
+      chartAtPrev.push(atP);
+      chartAt2026.push(at26);
+      
       chartWaste.push(b.wCost);
 
       html += `<tr>
@@ -3446,8 +3470,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     modalDayBody.innerHTML = html;
 
-    currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
-    
+
+        currentModalData = { 
+      labels: chartLabels, 
+      sales2025: chartSales2025, 
+      salesPrev: chartSalesPrev, 
+      sales2026: chartSales2026, 
+      adt2025: chartAdt2025,
+      adtPrev: chartAdtPrev,
+      adt2026: chartAdt2026,
+      at2025: chartAt2025,
+      atPrev: chartAtPrev,
+      at2026: chartAt2026,
+      waste: chartWaste 
+    };
     document.getElementById('storeDayModal').classList.add('open');
     document.getElementById('modalTableView').style.display = 'block';
     document.getElementById('modalChartView').style.display = 'none';
@@ -3466,6 +3502,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  let currentChartMetric = 'sales';
+
   window.renderStoreDayChart = function() {
     if (!currentModalData) return;
     if (storeDayChartInstance) { storeDayChartInstance.destroy(); storeDayChartInstance = null; }
@@ -3473,34 +3511,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('storeDayChart');
     if (!canvas) return;
 
+    // Define what datasets to show based on the selected metric
+    let datasets = [];
+    let yAxisTitle = '';
 
+    if (currentChartMetric === 'sales') {
+      yAxisTitle = 'Sales';
+      datasets = [
+        { label: '2025', data: currentModalData.sales2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
+        { label: 'Prev Month', data: currentModalData.salesPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
+        { label: '2026', data: currentModalData.sales2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+      ];
+    } else if (currentChartMetric === 'adt') {
+      yAxisTitle = 'Transactions (ADT)';
+      datasets = [
+        { label: '2025 CC', data: currentModalData.adt2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
+        { label: 'Prev Month CC', data: currentModalData.adtPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
+        { label: '2026 CC', data: currentModalData.adt2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+      ];
+    } else if (currentChartMetric === 'at') {
+      yAxisTitle = 'Avg Ticket (AT)';
+      datasets = [
+        { label: '2025 AT', data: currentModalData.at2025, backgroundColor: 'rgba(148,163,184,.75)', borderRadius: 4 },
+        { label: 'Prev Month AT', data: currentModalData.atPrev, backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4 },
+        { label: '2026 AT', data: currentModalData.at2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4 }
+      ];
+    } else if (currentChartMetric === 'waste') {
+      yAxisTitle = 'Wastage Amount';
+      datasets = [
+        { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4 }
+      ];
+    }
 
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels: currentModalData.labels,
-        datasets: [
-          { label: 'Sales (2026)', data: currentModalData.sales, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, yAxisID: 'y' },
-          { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4, yAxisID: 'y' },
-          { label: 'ADT', data: currentModalData.adt, type: 'line', borderColor: '#f59e0b', borderWidth: 2, tension: .3, pointRadius: 3, yAxisID: 'y1' },
-          { label: 'AT', data: currentModalData.at, type: 'line', borderColor: '#8b5cf6', borderWidth: 2, tension: .3, pointRadius: 3, yAxisID: 'y2' }
-        ]
+        datasets: datasets
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: { 
-          legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } }
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) label += ': ';
+                if (context.parsed.y !== null) {
+                  if (currentChartMetric === 'at') {
+                    label += context.parsed.y.toFixed(1);
+                  } else {
+                    label += context.parsed.y.toLocaleString('en-US', {maximumFractionDigits:0});
+                  }
+                }
+                return label;
+              }
+            }
+          }
         },
         scales: {
-          y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Sales & Wastage', font: {size: 10} } },
-          y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'ADT (CC)', font: {size: 10} } },
-          y2: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'AT', font: {size: 10} } }
+          y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: yAxisTitle, font: {size: 10} } }
         }
       }
     });
   };
-
   // Toggle Listeners
   const btnTable = document.getElementById('viewModeTableBtn');
   const btnChart = document.getElementById('viewModeChartBtn');
@@ -3531,7 +3607,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
       });
   }
-
+  // Chart Metric Toggles
+  document.querySelectorAll('.chart-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.chart-toggle').forEach(b => {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.add('active', 'btn-primary');
+      btn.classList.remove('btn-outline');
+      
+      currentChartMetric = btn.dataset.metric;
+      window.renderStoreDayChart();
+    });
+  });
 
 });
 </script>

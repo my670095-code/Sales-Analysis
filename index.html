@@ -1949,7 +1949,7 @@ if (wastageLabel) {
       showToast('Wastage failed: ' + err.message, 'error');
     }
   }
-
+  window.getFilteredWastage = getFilteredWastage;
   function getFilteredWastage() {
     const selY = [...FilterState.year.selected].map(Number);
     const selM = [...FilterState.month.selected].map(Number);
@@ -3427,12 +3427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('storeDayChart');
     if (!canvas) return;
 
-    // Ensure the container has a size
-    const container = document.getElementById('modalChartView');
-    if (!container || container.offsetWidth === 0) {
-        // If hidden, don't render yet
-        return;
-    }
+
 
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
       type: 'bar',

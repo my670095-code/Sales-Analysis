@@ -3197,8 +3197,7 @@ window.addEventListener('resize', () => {
     dashboardContainer.classList.remove('expanded');
   }
 });
-</script>
-  <script>
+<script>
 // ===== OVERRIDE: STORE DAY MODAL WITH WASTAGE & CHART =====
 document.addEventListener('DOMContentLoaded', () => {
   
@@ -3206,19 +3205,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentModalData = null; 
 
   window.openStoreDayModal = function(storeCode, area) {
-    // Access variables from the main closure via window
     const rawData = window.__rawData || [];
     const filteredData = window.__filteredData || [];
     const tm = window.__targetMaps || {};
     
-    // Recreate helper functions locally since we are outside the main IIFE
+    // Helper functions
     const daysInMonth = (y, m) => new Date(y, m, 0).getDate();
     const fmtCur = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
     const fmtNum = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
     const fmtAT = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
     const fmtSignedPct = r => { if (!isFinite(r) || r === 0) return { text: '—', cls: '' }; const d = (r-1)*100, s = d >= 0 ? '+' : '', c = d >= 0 ? 'pct-up' : 'pct-down'; return { text: `${s}${d.toFixed(1)}%`, cls: c }; };
     
-    // Get Context
+    // Get Context (Current & Previous Month)
     const selM = [...FilterState.month.selected].map(Number);
     const selY = [...FilterState.year.selected].map(Number);
     const curM = selM.length === 1 ? selM[0] : Math.max(...selM);
@@ -3242,7 +3240,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDowSet = window.__modalDow;
     const dowAllowed = d => modalDowSet.size === 0 || modalDowSet.has(d.getDay());
 
-    // Get Wastage
+    // Target Calculation
+    let vDays = 0;
+    const isClosed = (typeof WEEKEND_CLOSED !== 'undefined') && WEEKEND_CLOSED.has(String(storeCode));
+    const dim = daysInMonth(curY, curM);
+    for (let d = 1; d <= dim; d++) { 
+      const dt = new Date(curY, curM - 1, d); 
+      const dow = dt.getDay(); 
+      if (!isClosed || (dow !== 5 && dow !== 6)) vDays++; 
+    }
+    // Safely get target
+    let fullMonthTarget = 0;
+    try {
+       const tCode = tm.exact?.get(`${storeCode}||${area}||${curY}||${curM}`) || tm.byCodeYearMonth?.get(`${storeCode}||${curY}||${curM}`) || 0;
+       fullMonthTarget = tCode;
+    } catch(e) {}
+    const perDayT = vDays > 0 ? fullMonthTarget / vDays : 0;
+
+    // Wastage
     let storeWastage = [];
     try {
         if (typeof getFilteredWastage === 'function') {
@@ -3300,7 +3315,12 @@ document.addEventListener('DOMContentLoaded', () => {
       tot.wCost += b.wCost; tot.wQty += b.wQty;
 
       const wPct = b.d2026 > 0 ? (b.wCost / b.d2026 * 100) : 0;
+      
+      // Ratio Calculations
       const lflF = fmtSignedPct(b.d2025 > 0 ? (b.d2026 / b.d2025) : NaN);
+      const tgtF = fmtSignedPct(perDayT > 0 ? (b.d2026 / perDayT) : NaN);
+      const momF = fmtSignedPct(b.dPrev > 0 ? (b.d2026 / b.dPrev) : NaN);
+      
       const cellCls = (b.d2025 > 0 || b.d2026 > 0) ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
       const wasteCls = wPct > 5 ? 'high' : wPct > 2 ? 'medium' : 'low';
 
@@ -3325,12 +3345,17 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="cell-waste ${wasteCls}">${b.wCost > 0 && b.d2026 > 0 ? wPct.toFixed(2) + '%' : '—'}</td>
         <td class="cell-waste">${b.wQty > 0 ? fmtNum(b.wQty) : '—'}</td>
         <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
-        <td class="cell-ratios">—</td>
-        <td class="cell-ratios">—</td>
+        <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
+        <td class="cell-ratios ${momF.cls}">${momF.text}</td>
       </tr>`;
     }
     
+    const stLfl = fmtSignedPct(tot.d2025 > 0 ? (tot.d2026 / tot.d2025) : NaN);
+    const stTgt = fmtSignedPct(fullMonthTarget > 0 ? (tot.d2026 / fullMonthTarget) : NaN);
+    const stMom = fmtSignedPct(tot.dPrev > 0 ? (tot.d2026 / tot.dPrev) : NaN);
     const stPct = tot.d2026 > 0 ? (tot.wCost / tot.d2026 * 100) : 0;
+    const stCls = (tot.d2025 > 0 || tot.d2026 > 0) ? (tot.d2026 >= tot.d2025 ? 'cell-positive' : 'cell-negative') : '';
+
     html += `<tr class="subtotal-row">
       <td>TOTAL</td>
       <td class="cell-2025">${fmtCur(tot.d2025)}</td>
@@ -3339,15 +3364,15 @@ document.addEventListener('DOMContentLoaded', () => {
       <td class="cell-prev">${fmtCur(tot.dPrev)}</td>
       <td class="cell-prev">${fmtNum(tot.oPrev)}</td>
       <td class="cell-prev">${fmtAT(tot.oPrev > 0 ? tot.dPrev / tot.oPrev : 0)}</td>
-      <td class="cell-2026">${fmtCur(tot.d2026)}</td>
-      <td class="cell-2026">${fmtNum(tot.o2026)}</td>
-      <td class="cell-2026">${fmtAT(tot.o2026 > 0 ? tot.d2026 / tot.o2026 : 0)}</td>
+      <td class="cell-2026 ${stCls}">${fmtCur(tot.d2026)}</td>
+      <td class="cell-2026 ${stCls}">${fmtNum(tot.o2026)}</td>
+      <td class="cell-2026 ${stCls}">${fmtAT(tot.o2026 > 0 ? tot.d2026 / tot.o2026 : 0)}</td>
       <td class="cell-waste">${tot.wCost > 0 ? fmtCur(tot.wCost) : '—'}</td>
       <td class="cell-waste">${tot.wCost > 0 ? stPct.toFixed(2) + '%' : '—'}</td>
       <td class="cell-waste">${tot.wQty > 0 ? fmtNum(tot.wQty) : '—'}</td>
-      <td class="cell-ratios">—</td>
-      <td class="cell-ratios">—</td>
-      <td class="cell-ratios">—</td>
+      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
+      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
+      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
     </tr>`;
     
     modalDayBody.innerHTML = html;
@@ -3404,20 +3429,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle Listeners
   const btnTable = document.getElementById('viewModeTableBtn');
   const btnChart = document.getElementById('viewModeChartBtn');
+  const viewTable = document.getElementById('modalTableView');
+  const viewChart = document.getElementById('modalChartView');
   
   if(btnTable && btnChart) {
       btnTable.addEventListener('click', () => {
-        document.getElementById('modalTableView').style.display = 'block';
-        document.getElementById('modalChartView').style.display = 'none';
+        viewTable.style.display = 'block';
+        viewChart.style.display = 'none';
         btnTable.classList.add('active');
         btnChart.classList.remove('active');
       });
     
       btnChart.addEventListener('click', () => {
-        document.getElementById('modalTableView').style.display = 'none';
-        document.getElementById('modalChartView').style.display = 'block';
+        viewTable.style.display = 'none';
+        viewChart.style.display = 'block';
         btnChart.classList.add('active');
         btnTable.classList.remove('active');
+        // Fix chart sizing issue when toggling from display:none
+        if (storeDayChartInstance) {
+            storeDayChartInstance.resize();
+        }
       });
   }
 });

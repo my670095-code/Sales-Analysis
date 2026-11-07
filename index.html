@@ -904,12 +904,20 @@
           <div class="sub" id="modalStoreSub">Day-wise breakdown</div>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
+          
+          <!-- ADDED: View Toggle -->
+          <div style="display:flex; background:var(--bg); border-radius:8px; padding:2px; margin-right:8px;">
+            <button class="toggle-btn active" id="viewModeTableBtn" style="padding:4px 10px; border:none; background:transparent; font-size:.75rem; height:auto; box-shadow:none;">Table</button>
+            <button class="toggle-btn" id="viewModeChartBtn" style="padding:4px 10px; border:none; background:transparent; font-size:.75rem; height:auto; box-shadow:none;">Chart</button>
+          </div>
+
           <button class="export-btn excel" id="modalExportExcel"><i class="fas fa-file-excel"></i> Excel</button>
           <button class="export-btn pdf" id="modalExportPdf"><i class="fas fa-file-pdf"></i> PDF</button>
           <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
         </div>
       </div>
-            <div class="modal-body">
+      
+      <div class="modal-body">
         <div class="modal-dow-bar" id="modalDowBar">
           <span class="dow-label"><i class="fas fa-filter"></i> Filter days:</span>
           <button class="dow-pill" data-modal-dow="all">All</button>
@@ -921,37 +929,50 @@
           <button class="dow-pill" data-modal-dow="5">Fri</button>
           <button class="dow-pill" data-modal-dow="6">Sat</button>
         </div>
-        <table id="modalDayTable">
-          <thead>
-            <tr>
-              <th colspan="1" style="border-bottom:2px solid var(--border);">&nbsp;</th>
-              <th colspan="3" class="group-2025">2025</th>
-              <th colspan="3" class="group-prev" id="modalHeaderPrev">Prev Month</th>
-              <th colspan="3" class="group-2026">2026</th>
-              <th colspan="3" class="group-ratios">Ratios</th>
-            </tr>
-            <tr>
-              <th style="text-align:left;">Day</th>
-              <th class="group-2025">Sales</th>
-              <th class="group-2025">CC</th>
-              <th class="group-2025">AT</th>
-              <th class="group-prev">Sales</th>
-              <th class="group-prev">CC</th>
-              <th class="group-prev">AT</th>
-              <th class="group-2026">Sales</th>
-              <th class="group-2026">CC</th>
-              <th class="group-2026">AT</th>
-              <th class="group-ratios">LFL</th>
-              <th class="group-ratios">Tgt</th>
-              <th class="group-ratios">MoM</th>
-            </tr>
-          </thead>
-          <tbody id="modalDayBody"></tbody>
-        </table>
+        
+        <!-- TABLE VIEW -->
+        <div id="modalTableView">
+          <table id="modalDayTable">
+            <thead>
+              <tr>
+                <th colspan="1" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+                <th colspan="3" class="group-2025">2025</th>
+                <th colspan="3" class="group-prev" id="modalHeaderPrev">Prev Month</th>
+                <th colspan="3" class="group-2026">2026</th>
+                <th colspan="3" class="group-waste">Wastage</th> <!-- ADDED WASTAGE HEADER -->
+                <th colspan="3" class="group-ratios">Ratios</th>
+              </tr>
+              <tr>
+                <th style="text-align:left;">Day</th>
+                <th class="group-2025">Sales</th>
+                <th class="group-2025">CC</th>
+                <th class="group-2025">AT</th>
+                <th class="group-prev">Sales</th>
+                <th class="group-prev">CC</th>
+                <th class="group-prev">AT</th>
+                <th class="group-2026">Sales</th>
+                <th class="group-2026">CC</th>
+                <th class="group-2026">AT</th>
+                <th class="group-waste">Waste</th> <!-- ADDED -->
+                <th class="group-waste">Waste %</th> <!-- ADDED -->
+                <th class="group-waste">Waste Qty</th> <!-- ADDED -->
+                <th class="group-ratios">LFL</th>
+                <th class="group-ratios">Tgt</th>
+                <th class="group-ratios">MoM</th>
+              </tr>
+            </thead>
+            <tbody id="modalDayBody"></tbody>
+          </table>
+        </div>
+
+        <!-- ADDED: CHART VIEW -->
+        <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
+          <canvas id="storeDayChart"></canvas>
+        </div>
+
       </div>
     </div>
   </div>
-
   <!-- HELP MODAL -->
   <div class="modal-overlay" id="helpModal">
     <div class="modal-box" style="max-width:600px;">
@@ -1699,7 +1720,10 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     FilterState.dow.options = masterAllOptions.dow.slice();
     FilterState.dow.selected = new Set(masterAllOptions.dow.map(o => o.value));
     ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+    
     lflOnly = false; $('lflToggle').classList.remove('active');
+    newStoreOnly = false; $('newStoreToggle').classList.remove('active'); // <-- ADD THIS LINE
+    
     currentSort = { key: null, dir: 'desc' };
     globalSearchTerm = ''; $('globalSearch').value = '';
     applyFiltersAndRender();
@@ -1707,12 +1731,12 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
   });
 
   $('adsToggle').addEventListener('click', () => { adsMode = !adsMode; $('adsToggle').classList.toggle('active', adsMode); applyFiltersAndRender(); });
- $('lflToggle').addEventListener('click', () => { 
-  lflOnly = !lflOnly; 
-  $('lflToggle').classList.toggle('active', lflOnly); 
-  if(lflOnly && newStoreOnly) { newStoreOnly = false; $('newStoreToggle').classList.remove('active'); }
-  applyFiltersAndRender(); 
-});
+  $('lflToggle').addEventListener('click', () => { 
+    lflOnly = !lflOnly; 
+    $('lflToggle').classList.toggle('active', lflOnly); 
+    if(lflOnly && newStoreOnly) { newStoreOnly = false; $('newStoreToggle').classList.remove('active'); }
+    applyFiltersAndRender(); 
+  });
 
 $('newStoreToggle').addEventListener('click', () => { 
   newStoreOnly = !newStoreOnly; 
@@ -3171,6 +3195,230 @@ window.addEventListener('resize', () => {
   } else {
     sidebar.classList.remove('collapsed');
     dashboardContainer.classList.remove('expanded');
+  }
+});
+</script>
+  <script>
+// ===== OVERRIDE: STORE DAY MODAL WITH WASTAGE & CHART =====
+document.addEventListener('DOMContentLoaded', () => {
+  
+  let storeDayChartInstance = null;
+  let currentModalData = null; 
+
+  window.openStoreDayModal = function(storeCode, area) {
+    // Access variables from the main closure via window
+    const rawData = window.__rawData || [];
+    const filteredData = window.__filteredData || [];
+    const tm = window.__targetMaps || {};
+    
+    // Recreate helper functions locally since we are outside the main IIFE
+    const daysInMonth = (y, m) => new Date(y, m, 0).getDate();
+    const fmtCur = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const fmtNum = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const fmtAT = n => (n==null?0:n).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+    const fmtSignedPct = r => { if (!isFinite(r) || r === 0) return { text: '—', cls: '' }; const d = (r-1)*100, s = d >= 0 ? '+' : '', c = d >= 0 ? 'pct-up' : 'pct-down'; return { text: `${s}${d.toFixed(1)}%`, cls: c }; };
+    
+    // Get Context
+    const selM = [...FilterState.month.selected].map(Number);
+    const selY = [...FilterState.year.selected].map(Number);
+    const curM = selM.length === 1 ? selM[0] : Math.max(...selM);
+    const curY = selY.length === 1 ? selY[0] : Math.max(...selY);
+    let prevM = curM - 1, prevY = curY;
+    if (prevM < 1) { prevM = 12; prevY = curY - 1; }
+
+    const modalHeaderPrev = document.getElementById('modalHeaderPrev');
+    if(modalHeaderPrev) modalHeaderPrev.textContent = `${MONTHS[prevM-1]} ${prevY}`;
+    
+    const sample = rawData.find(r => r.storeCode === storeCode && r.area === area) || rawData.find(r => r.storeCode === storeCode);
+    if (!sample) return;
+    
+    let sName = sample.store;
+    if (!sName.startsWith(storeCode)) sName = `${storeCode} - ${sName}`;
+    
+    document.getElementById('modalStoreName').textContent = sName;
+    document.getElementById('modalStoreSub').textContent = `Manager: ${area} • Day-wise breakdown`;
+
+    window.__modalDow = window.__modalDow || new Set();
+    const modalDowSet = window.__modalDow;
+    const dowAllowed = d => modalDowSet.size === 0 || modalDowSet.has(d.getDay());
+
+    // Get Wastage
+    let storeWastage = [];
+    try {
+        if (typeof getFilteredWastage === 'function') {
+            storeWastage = getFilteredWastage().filter(w => w.storeCode === storeCode && w.month === curM);
+        }
+    } catch(e) {}
+
+    const dMap = new Map();
+    const ensure = d => { 
+      if (!dMap.has(d)) dMap.set(d, { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 }); 
+      return dMap.get(d); 
+    };
+
+    // Map Sales
+    filteredData.forEach(r => {
+      if (r.storeCode !== storeCode || (area && r.area !== area)) return;
+      if (r.day == null || r.month !== curM) return;
+      if (!r.dob || !dowAllowed(r.dob)) return;
+      const b = ensure(r.day);
+      if (r.year === 2025) { b.d2025 += r.net; b.o2025 += r.orders; }
+      else if (r.year === curY) { b.d2026 += r.net; b.o2026 += r.orders; }
+    });
+    
+    rawData.forEach(r => {
+      if (r.storeCode !== storeCode || (area && r.area !== area)) return;
+      if (r.year !== prevY || r.month !== prevM || r.day == null) return;
+      if (!r.dob || !dowAllowed(r.dob)) return;
+      const b = ensure(r.day); b.dPrev += r.net; b.oPrev += r.orders;
+    });
+
+    // Map Wastage
+    storeWastage.forEach(w => {
+      if (!dowAllowed(new Date(w.year, w.month-1, w.day))) return;
+      const b = ensure(w.day);
+      b.wCost += w.wastageCost;
+      b.wQty += w.wastageQty;
+    });
+
+    const allD = [...dMap.keys()].sort((a, b) => a - b);
+    const modalDayBody = document.getElementById('modalDayBody');
+    
+    if (!allD.length) { modalDayBody.innerHTML = '<tr><td colspan="16" class="modal-empty">No data</td></tr>'; document.getElementById('storeDayModal').classList.add('open'); return; }
+    
+    const minD = allD[0], maxD = allD[allD.length - 1];
+    const tot = { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
+    
+    let html = '';
+    const chartLabels = [], chartSales = [], chartAdt = [], chartAt = [], chartWaste = [];
+
+    for (let d = minD; d <= maxD; d++) {
+      const b = dMap.get(d) || { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0, wCost: 0, wQty: 0 };
+      const at25 = b.o2025 > 0 ? b.d2025 / b.o2025 : 0, atP = b.oPrev > 0 ? b.dPrev / b.oPrev : 0, at26 = b.o2026 > 0 ? b.d2026 / b.o2026 : 0;
+      
+      tot.d2025 += b.d2025; tot.o2025 += b.o2025; tot.dPrev += b.dPrev; tot.oPrev += b.oPrev; tot.d2026 += b.d2026; tot.o2026 += b.o2026;
+      tot.wCost += b.wCost; tot.wQty += b.wQty;
+
+      const wPct = b.d2026 > 0 ? (b.wCost / b.d2026 * 100) : 0;
+      const lflF = fmtSignedPct(b.d2025 > 0 ? (b.d2026 / b.d2025) : NaN);
+      const cellCls = (b.d2025 > 0 || b.d2026 > 0) ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
+      const wasteCls = wPct > 5 ? 'high' : wPct > 2 ? 'medium' : 'low';
+
+      chartLabels.push(`Day ${d}`);
+      chartSales.push(b.d2026);
+      chartAdt.push(b.o2026);
+      chartAt.push(at26);
+      chartWaste.push(b.wCost);
+
+      html += `<tr>
+        <td>Day ${d}</td>
+        <td class="cell-2025">${fmtCur(b.d2025)}</td>
+        <td class="cell-2025">${fmtNum(b.o2025)}</td>
+        <td class="cell-2025">${fmtAT(at25)}</td>
+        <td class="cell-prev">${fmtCur(b.dPrev)}</td>
+        <td class="cell-prev">${fmtNum(b.oPrev)}</td>
+        <td class="cell-prev">${fmtAT(atP)}</td>
+        <td class="cell-2026 ${cellCls}">${fmtCur(b.d2026)}</td>
+        <td class="cell-2026 ${cellCls}">${fmtNum(b.o2026)}</td>
+        <td class="cell-2026 ${cellCls}">${fmtAT(at26)}</td>
+        <td class="cell-waste ${wasteCls}">${b.wCost > 0 ? fmtCur(b.wCost) : '—'}</td>
+        <td class="cell-waste ${wasteCls}">${b.wCost > 0 && b.d2026 > 0 ? wPct.toFixed(2) + '%' : '—'}</td>
+        <td class="cell-waste">${b.wQty > 0 ? fmtNum(b.wQty) : '—'}</td>
+        <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
+        <td class="cell-ratios">—</td>
+        <td class="cell-ratios">—</td>
+      </tr>`;
+    }
+    
+    const stPct = tot.d2026 > 0 ? (tot.wCost / tot.d2026 * 100) : 0;
+    html += `<tr class="subtotal-row">
+      <td>TOTAL</td>
+      <td class="cell-2025">${fmtCur(tot.d2025)}</td>
+      <td class="cell-2025">${fmtNum(tot.o2025)}</td>
+      <td class="cell-2025">${fmtAT(tot.o2025 > 0 ? tot.d2025 / tot.o2025 : 0)}</td>
+      <td class="cell-prev">${fmtCur(tot.dPrev)}</td>
+      <td class="cell-prev">${fmtNum(tot.oPrev)}</td>
+      <td class="cell-prev">${fmtAT(tot.oPrev > 0 ? tot.dPrev / tot.oPrev : 0)}</td>
+      <td class="cell-2026">${fmtCur(tot.d2026)}</td>
+      <td class="cell-2026">${fmtNum(tot.o2026)}</td>
+      <td class="cell-2026">${fmtAT(tot.o2026 > 0 ? tot.d2026 / tot.o2026 : 0)}</td>
+      <td class="cell-waste">${tot.wCost > 0 ? fmtCur(tot.wCost) : '—'}</td>
+      <td class="cell-waste">${tot.wCost > 0 ? stPct.toFixed(2) + '%' : '—'}</td>
+      <td class="cell-waste">${tot.wQty > 0 ? fmtNum(tot.wQty) : '—'}</td>
+      <td class="cell-ratios">—</td>
+      <td class="cell-ratios">—</td>
+      <td class="cell-ratios">—</td>
+    </tr>`;
+    
+    modalDayBody.innerHTML = html;
+
+    currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
+    window.renderStoreDayChart();
+
+    document.getElementById('storeDayModal').classList.add('open');
+
+    document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
+      const v = btn.dataset.modalDow;
+      const isActive = v === 'all' ? modalDowSet.size === 0 : modalDowSet.has(Number(v));
+      btn.classList.toggle('active', isActive);
+      btn.onclick = () => {
+        if (v === 'all') modalDowSet.clear();
+        else { const n = Number(v); if (modalDowSet.has(n)) modalDowSet.delete(n); else modalDowSet.add(n); }
+        window.openStoreDayModal(storeCode, area);
+      };
+    });
+  };
+
+  window.renderStoreDayChart = function() {
+    if (!currentModalData) return;
+    if (storeDayChartInstance) storeDayChartInstance.destroy();
+    const canvas = document.getElementById('storeDayChart');
+    if (!canvas) return;
+
+    storeDayChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: currentModalData.labels,
+        datasets: [
+          { label: 'Sales (2026)', data: currentModalData.sales, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, yAxisID: 'y' },
+          { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4, yAxisID: 'y' },
+          { label: 'ADT', data: currentModalData.adt, type: 'line', borderColor: '#f59e0b', borderWidth: 2, tension: .3, pointRadius: 3, yAxisID: 'y1' },
+          { label: 'AT', data: currentModalData.at, type: 'line', borderColor: '#8b5cf6', borderWidth: 2, tension: .3, pointRadius: 3, yAxisID: 'y2' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { 
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } }
+        },
+        scales: {
+          y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Sales & Wastage', font: {size: 10} } },
+          y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'ADT (CC)', font: {size: 10} } },
+          y2: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'AT', font: {size: 10} } }
+        }
+      }
+    });
+  };
+
+  // Toggle Listeners
+  const btnTable = document.getElementById('viewModeTableBtn');
+  const btnChart = document.getElementById('viewModeChartBtn');
+  
+  if(btnTable && btnChart) {
+      btnTable.addEventListener('click', () => {
+        document.getElementById('modalTableView').style.display = 'block';
+        document.getElementById('modalChartView').style.display = 'none';
+        btnTable.classList.add('active');
+        btnChart.classList.remove('active');
+      });
+    
+      btnChart.addEventListener('click', () => {
+        document.getElementById('modalTableView').style.display = 'none';
+        document.getElementById('modalChartView').style.display = 'block';
+        btnChart.classList.add('active');
+        btnTable.classList.remove('active');
+      });
   }
 });
 </script>

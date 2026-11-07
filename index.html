@@ -3400,10 +3400,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     currentModalData = { labels: chartLabels, sales: chartSales, adt: chartAdt, at: chartAt, waste: chartWaste };
     
-    // Always render the chart (so it's ready when user toggles to Chart view)
-    window.renderStoreDayChart();
-
+    // Open the modal FIRST (so container has size)
     document.getElementById('storeDayModal').classList.add('open');
+
+    // THEN render the chart — this ensures Chart.js can measure the canvas correctly
+    setTimeout(() => {
+        window.renderStoreDayChart();
+    }, 50);
 
     document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
       const v = btn.dataset.modalDow;

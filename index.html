@@ -3082,8 +3082,8 @@ if (wLookup) {
       <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
     </tr>`;
        modalDayBody.innerHTML = html;
-    storeDayModal.classList.add('open');
-  resetChartMetricToggles();
+      storeDayModal.classList.add('open');
+    if (typeof resetChartMetricToggles === 'function') resetChartMetricToggles();
     document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
       const v = btn.dataset.modalDow;
       const isActive = v === 'all' ? modalDowSet.size === 0 : modalDowSet.has(Number(v));

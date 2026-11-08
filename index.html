@@ -3591,17 +3591,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!canvas) return;
 
     let datasets = [];
-    let yAxisTitle = '';
+    let scales = {};
+    
+    // We set up 3 separate, stacked axes
+    const yAxes = [
+      { id: 'y-2025', title: '2025', color: 'rgba(148,163,184,1)', position: 'left' },
+      { id: 'y-prev', title: 'Prev Month', color: 'rgba(245,158,11,1)', position: 'left' },
+      { id: 'y-2026', title: '2026', color: '#3b82f6', position: 'left' }
+    ];
 
-    // Helper function to apply the wider dashed styles
+    // 1. Build the scales dynamically
+    yAxes.forEach((axis, index) => {
+      scales[axis.id] = {
+        type: 'linear',
+        display: true,
+        position: 'left',
+        stack: 'demo', // This forces them to stack vertically!
+        stackWeight: 1, // Equal height for each
+        title: { display: true, text: axis.title, color: axis.color, font: { size: 10, weight: 'bold' } },
+        ticks: { color: axis.color, font: { size: 9 }, maxTicksLimit: 5 },
+        grid: { 
+          drawOnChartArea: true, 
+          color: 'rgba(0,0,0,0.04)',
+          // Only show grid lines for the top and bottom axis to keep it clean
+          display: index === 2 || index === 0 
+        }
+      };
+    });
+
+    // 2. Helper to build the datasets assigned to their specific axes
     const applyStyles = (data2025, dataPrev, data2026, labelSuffix) => {
       return [
         { 
           label: `2025 ${labelSuffix}`.trim(), 
           data: data2025, 
+          yAxisID: 'y-2025', // Locked to the top track
           borderColor: 'rgba(148,163,184,1)', 
           backgroundColor: 'transparent',
-          borderDash: [8, 8], // WIDER GAP for 2025
+          borderDash: [8, 8], 
           tension: 0.4, 
           pointRadius: 0, 
           pointHoverRadius: 4,
@@ -3610,9 +3637,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
           label: `Prev Month ${labelSuffix}`.trim(), 
           data: dataPrev, 
+          yAxisID: 'y-prev', // Locked to the middle track
           borderColor: 'rgba(245,158,11,1)', 
           backgroundColor: 'transparent',
-          borderDash: [12, 8], // WIDER GAP for Prev Month
+          borderDash: [12, 8], 
           tension: 0.4, 
           pointRadius: 0,
           pointHoverRadius: 4,
@@ -3621,9 +3649,10 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
           label: `2026 ${labelSuffix}`.trim(), 
           data: data2026, 
+          yAxisID: 'y-2026', // Locked to the bottom track
           borderColor: '#3b82f6', 
           backgroundColor: 'rgba(59,130,246,0.1)', 
-          borderDash: [16, 8], // WIDER GAP for 2026
+          borderDash: [16, 8], 
           tension: 0.4, 
           fill: true, 
           pointRadius: 0, 
@@ -3634,23 +3663,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (currentChartMetric === 'sales') {
-      yAxisTitle = 'Sales';
       datasets = applyStyles(currentModalData.sales2025, currentModalData.salesPrev, currentModalData.sales2026, '');
     } else if (currentChartMetric === 'adt') {
-      yAxisTitle = 'Transactions (ADT)';
       datasets = applyStyles(currentModalData.adt2025, currentModalData.adtPrev, currentModalData.adt2026, 'CC');
     } else if (currentChartMetric === 'at') {
-      yAxisTitle = 'Avg Ticket (AT)';
       datasets = applyStyles(currentModalData.at2025, currentModalData.atPrev, currentModalData.at2026, 'AT');
     } else if (currentChartMetric === 'waste') {
-      yAxisTitle = 'Wastage Amount';
+      // If viewing wastage, we don't need to stack. Just use a single normal axis.
+      scales = { y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Wastage Amount', font: {size: 10} } } };
       datasets = [
         { 
           label: 'Wastage', 
           data: currentModalData.waste, 
           borderColor: '#dc2626', 
           backgroundColor: 'rgba(220,38,38,0.1)', 
-          borderDash: [16, 8], // WIDER GAP
+          borderDash: [16, 8], 
           tension: 0.4, 
           fill: true, 
           pointRadius: 0, 
@@ -3660,7 +3687,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
     }
 
-    // Custom plugin to draw numbers with a clean background to prevent overlap
+    // 3. Custom plugin to draw the numbers cleanly on top of the lines
     const inlineLabelsPlugin = {
       id: 'inlineLabels',
       afterDatasetsDraw(chart) {
@@ -3668,33 +3695,26 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.font = 'bold 9px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.textBaseline = 'bottom';
 
-        // Get background color for the text pill based on theme
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const bgColor = isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)';
 
         chart.data.datasets.forEach((dataset, i) => {
           const meta = chart.getDatasetMeta(i);
-          
-          // Only draw labels for the most recent year (2026) to prevent extreme clutter
-          // If you want ALL numbers, remove this IF statement
-          if (i !== 2 && currentChartMetric !== 'waste') return; 
-
           meta.data.forEach((element, index) => {
             const data = dataset.data[index];
             
             if (data > 0) {
-              let yOffset = -12; // Position text above the line
-              
+              let yOffset = -8; // Uniform offset since they are on separate tracks now
+
               ctx.fillStyle = dataset.borderColor;
               let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
               
-              // Measure text to draw a background pill
               const textWidth = ctx.measureText(valText).width;
               const padding = 3;
               
-              // Draw background pill
+              // Draw background pill so the text is readable over grid lines
               ctx.fillStyle = bgColor;
               ctx.beginPath();
               ctx.roundRect(
@@ -3706,7 +3726,7 @@ document.addEventListener('DOMContentLoaded', () => {
               );
               ctx.fill();
 
-              // Draw text
+              // Draw the text
               ctx.fillStyle = dataset.borderColor;
               ctx.fillText(valText, element.x, element.y + yOffset);
             }
@@ -3746,16 +3766,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         },
         scales: {
-          y: { 
-            type: 'linear', 
-            position: 'left', 
-            beginAtZero: true, 
-            title: { display: true, text: yAxisTitle, font: {size: 10} },
-            grid: { color: 'rgba(0,0,0,0.04)' } 
-          },
           x: {
             grid: { display: false } 
-          }
+          },
+          ...scales // Inject our stacked axes here
         }
       },
       plugins: [inlineLabelsPlugin]

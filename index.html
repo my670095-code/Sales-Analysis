@@ -3593,7 +3593,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let datasets = [];
     let yAxisTitle = '';
 
-    // Helper function to apply the dashed styles consistently
+    // Helper function to apply the wider dashed styles
     const applyStyles = (data2025, dataPrev, data2026, labelSuffix) => {
       return [
         { 
@@ -3601,7 +3601,7 @@ document.addEventListener('DOMContentLoaded', () => {
           data: data2025, 
           borderColor: 'rgba(148,163,184,1)', 
           backgroundColor: 'transparent',
-          borderDash: [4, 4], // Gap for 2025
+          borderDash: [8, 8], // WIDER GAP for 2025
           tension: 0.4, 
           pointRadius: 0, 
           pointHoverRadius: 4,
@@ -3612,7 +3612,7 @@ document.addEventListener('DOMContentLoaded', () => {
           data: dataPrev, 
           borderColor: 'rgba(245,158,11,1)', 
           backgroundColor: 'transparent',
-          borderDash: [6, 6], // Different gap for Prev Month
+          borderDash: [12, 8], // WIDER GAP for Prev Month
           tension: 0.4, 
           pointRadius: 0,
           pointHoverRadius: 4,
@@ -3623,10 +3623,10 @@ document.addEventListener('DOMContentLoaded', () => {
           data: data2026, 
           borderColor: '#3b82f6', 
           backgroundColor: 'rgba(59,130,246,0.1)', 
-          borderDash: [8, 4], // Gap for 2026
+          borderDash: [16, 8], // WIDER GAP for 2026
           tension: 0.4, 
           fill: true, 
-          pointRadius: 0, // Hide the dots
+          pointRadius: 0, 
           pointHoverRadius: 6,
           borderWidth: 2.5 
         }
@@ -3650,7 +3650,7 @@ document.addEventListener('DOMContentLoaded', () => {
           data: currentModalData.waste, 
           borderColor: '#dc2626', 
           backgroundColor: 'rgba(220,38,38,0.1)', 
-          borderDash: [8, 4], 
+          borderDash: [16, 8], // WIDER GAP
           tension: 0.4, 
           fill: true, 
           pointRadius: 0, 
@@ -3660,7 +3660,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
     }
 
-    // Custom plugin to draw the numbers directly on the lines
+    // Custom plugin to draw numbers with a clean background to prevent overlap
     const inlineLabelsPlugin = {
       id: 'inlineLabels',
       afterDatasetsDraw(chart) {
@@ -3668,27 +3668,46 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.font = 'bold 9px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
+        ctx.textBaseline = 'middle';
+
+        // Get background color for the text pill based on theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const bgColor = isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)';
 
         chart.data.datasets.forEach((dataset, i) => {
           const meta = chart.getDatasetMeta(i);
+          
+          // Only draw labels for the most recent year (2026) to prevent extreme clutter
+          // If you want ALL numbers, remove this IF statement
+          if (i !== 2 && currentChartMetric !== 'waste') return; 
+
           meta.data.forEach((element, index) => {
             const data = dataset.data[index];
             
             if (data > 0) {
-              // Offset to prevent overlapping numbers
-              let yOffset = 0;
-              if (currentChartMetric !== 'waste') {
-                  if (i === 0) yOffset = -4; // 2025 slightly higher
-                  if (i === 1) yOffset = 4;  // Prev Month slightly lower
-                  if (i === 2) yOffset = -8; // 2026 highest
-              } else {
-                  yOffset = -8; // Wastage highest
-              }
-
+              let yOffset = -12; // Position text above the line
+              
               ctx.fillStyle = dataset.borderColor;
               let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
               
+              // Measure text to draw a background pill
+              const textWidth = ctx.measureText(valText).width;
+              const padding = 3;
+              
+              // Draw background pill
+              ctx.fillStyle = bgColor;
+              ctx.beginPath();
+              ctx.roundRect(
+                element.x - (textWidth / 2) - padding, 
+                element.y + yOffset - 6, 
+                textWidth + (padding * 2), 
+                12, 
+                4
+              );
+              ctx.fill();
+
+              // Draw text
+              ctx.fillStyle = dataset.borderColor;
               ctx.fillText(valText, element.x, element.y + yOffset);
             }
           });
@@ -3739,7 +3758,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       },
-      plugins: [inlineLabelsPlugin] // <-- Activates the custom number drawing
+      plugins: [inlineLabelsPlugin]
     });
   };
   

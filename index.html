@@ -1294,9 +1294,13 @@ function renderOptions(key) {
       if (key === 'month') {
         const selM = [...FilterState.month.selected].map(Number);
         // If exactly one month is selected, update the days
-        if (selM.length === 1) {
+            if (selM.length === 1) {
           const targetM = selM[0];
-          const maxDay = getMaxDayForMonth(2026, targetM);
+          // Determine the active year (default to 2026 if 'All' is selected)
+          const selY = [...FilterState.year.selected].map(Number);
+          const activeY = (selY.length === 1) ? selY[0] : 2026;
+          
+          const maxDay = getMaxDayForMonth(activeY, targetM);
           $('dayFrom').value = 1;
           $('dayTo').value = maxDay;
         }
@@ -1462,7 +1466,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     if (prevM < 1) { prevM = 12; prevY = curY - 1; }
     return { curM, prevM, curY, prevY };
   }
-    function getMaxDayForMonth(targetYear, targetMonth) {
+  function getMaxDayForMonth(targetYear, targetMonth) {
     const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
     if (!rows.length) return 31; // Fallback if no data found
     return Math.max(...rows.map(r => r.day));
@@ -1692,14 +1696,15 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
     ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     
-    // Set initial day range based on the latest month present
+     // Set initial day range based on the latest month present
     if (months.length > 0) {
       const latestMonth = Math.max(...months);
-      const maxDay = getMaxDayForMonth(2026, latestMonth);
+      // Get the year that corresponds to this latest month
+      const latestYear = years.includes(2026) ? 2026 : Math.max(...years);
+      const maxDay = getMaxDayForMonth(latestYear, latestMonth);
       if (document.getElementById('dayFrom')) document.getElementById('dayFrom').value = 1;
       if (document.getElementById('dayTo')) document.getElementById('dayTo').value = maxDay;
     }
-  }
 
     // ===== KPI UPDATE =====
   function updateKPIs(data) {
@@ -1767,9 +1772,9 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     const totS = FilterState.store.options.length, totA = FilterState.area.options.length;
     const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
 
-     filteredData = rawData.filter(r => {
+       filteredData = rawData.filter(r => {
       if (selY.length && selY.length !== totY && !selY.includes(r.year)) return false;
-      // FIX: Only check if the month is selected, regardless of how many are selected
+      // FIX: Strictly check if the month is in the selected list
       if (!selM.includes(r.month)) return false;
       if (selS.length && selS.length !== totS && !selS.includes(r.storeCode)) return false;
       if (selA.length && selA.length !== totA && !selA.includes(r.area)) return false;

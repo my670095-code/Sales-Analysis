@@ -1390,7 +1390,9 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
 // ===== MAIN DASHBOARD =====
 function getMaxDayForMonth(targetYear, targetMonth) {
-  const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
+  // Use the globally exposed rawData instead of the private local variable
+  const data = window.__rawData || []; 
+  const rows = data.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
   if (!rows.length) return 31;
   return Math.max(...rows.map(r => r.day));
 }

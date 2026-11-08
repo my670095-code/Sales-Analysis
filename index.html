@@ -1796,7 +1796,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
     const uniqS = new Set(filteredData.map(r => r.storeCode)).size;
     rowCountBadge.textContent = `${uniqS} stores • ${filteredData.length} rows`;
 
-    updateKPIs(filteredData);
+     updateKPIs(filteredData);
     renderCharts(filteredData);
     renderInsights(filteredData);
     renderExecutiveSummary(filteredData);
@@ -1804,6 +1804,9 @@ function getMaxDayForMonth(targetYear, targetMonth) {
     renderHeatmap(filteredData);
     renderTable(filteredData);
     renderYoY(filteredData);
+    
+    // ADD THIS LINE to refresh Wastage tab live
+    if (typeof window.renderWastage === 'function') window.renderWastage();
   }
   window.applyFiltersAndRender = applyFiltersAndRender;
 
@@ -3590,57 +3593,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let datasets = [];
     let yAxisTitle = '';
 
-    if (currentChartMetric === 'sales') {
-      yAxisTitle = 'Sales';
-      datasets = [
+    // Helper function to apply the dashed styles consistently
+    const applyStyles = (data2025, dataPrev, data2026, labelSuffix) => {
+      return [
         { 
-          label: '2025', 
-          data: currentModalData.sales2025, 
-          borderColor: 'rgba(148,163,184,0.8)', 
+          label: `2025 ${labelSuffix}`.trim(), 
+          data: data2025, 
+          borderColor: 'rgba(148,163,184,1)', 
           backgroundColor: 'transparent',
-          borderDash: [5, 5], // Dashed to act as a reference
+          borderDash: [4, 4], // Gap for 2025
           tension: 0.4, 
-          pointRadius: 0, // Hidden points for cleaner look
+          pointRadius: 0, 
           pointHoverRadius: 4,
-          borderWidth: 2 
+          borderWidth: 1.5 
         },
         { 
-          label: 'Prev Month', 
-          data: currentModalData.salesPrev, 
-          borderColor: 'rgba(245,158,11,0.8)', 
+          label: `Prev Month ${labelSuffix}`.trim(), 
+          data: dataPrev, 
+          borderColor: 'rgba(245,158,11,1)', 
           backgroundColor: 'transparent',
-          borderDash: [5, 5],
+          borderDash: [6, 6], // Different gap for Prev Month
           tension: 0.4, 
           pointRadius: 0,
           pointHoverRadius: 4,
-          borderWidth: 2 
+          borderWidth: 1.5 
         },
         { 
-          label: '2026', 
-          data: currentModalData.sales2026, 
+          label: `2026 ${labelSuffix}`.trim(), 
+          data: data2026, 
           borderColor: '#3b82f6', 
-          backgroundColor: 'rgba(59,130,246,0.15)', // Impact shading
+          backgroundColor: 'rgba(59,130,246,0.1)', 
+          borderDash: [8, 4], // Gap for 2026
           tension: 0.4, 
-          fill: true, // Adds the shaded area
-          pointRadius: 2, // Small points on main line
+          fill: true, 
+          pointRadius: 0, // Hide the dots
           pointHoverRadius: 6,
-          borderWidth: 3 
+          borderWidth: 2.5 
         }
       ];
+    };
+
+    if (currentChartMetric === 'sales') {
+      yAxisTitle = 'Sales';
+      datasets = applyStyles(currentModalData.sales2025, currentModalData.salesPrev, currentModalData.sales2026, '');
     } else if (currentChartMetric === 'adt') {
       yAxisTitle = 'Transactions (ADT)';
-      datasets = [
-        { label: '2025 CC', data: currentModalData.adt2025, borderColor: 'rgba(148,163,184,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: 'Prev Month CC', data: currentModalData.adtPrev, borderColor: 'rgba(245,158,11,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: '2026 CC', data: currentModalData.adt2026, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', tension: 0.4, fill: true, pointRadius: 2, borderWidth: 3 }
-      ];
+      datasets = applyStyles(currentModalData.adt2025, currentModalData.adtPrev, currentModalData.adt2026, 'CC');
     } else if (currentChartMetric === 'at') {
       yAxisTitle = 'Avg Ticket (AT)';
-      datasets = [
-        { label: '2025 AT', data: currentModalData.at2025, borderColor: 'rgba(148,163,184,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: 'Prev Month AT', data: currentModalData.atPrev, borderColor: 'rgba(245,158,11,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: '2026 AT', data: currentModalData.at2026, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', tension: 0.4, fill: true, pointRadius: 2, borderWidth: 3 }
-      ];
+      datasets = applyStyles(currentModalData.at2025, currentModalData.atPrev, currentModalData.at2026, 'AT');
     } else if (currentChartMetric === 'waste') {
       yAxisTitle = 'Wastage Amount';
       datasets = [
@@ -3648,18 +3649,56 @@ document.addEventListener('DOMContentLoaded', () => {
           label: 'Wastage', 
           data: currentModalData.waste, 
           borderColor: '#dc2626', 
-          backgroundColor: 'rgba(220,38,38,0.15)', 
+          backgroundColor: 'rgba(220,38,38,0.1)', 
+          borderDash: [8, 4], 
           tension: 0.4, 
-          fill: true, // Shaded area for waste impact
-          pointRadius: 2, 
+          fill: true, 
+          pointRadius: 0, 
           pointHoverRadius: 6,
-          borderWidth: 3 
+          borderWidth: 2.5 
         }
       ];
     }
 
+    // Custom plugin to draw the numbers directly on the lines
+    const inlineLabelsPlugin = {
+      id: 'inlineLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        ctx.save();
+        ctx.font = 'bold 9px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        chart.data.datasets.forEach((dataset, i) => {
+          const meta = chart.getDatasetMeta(i);
+          meta.data.forEach((element, index) => {
+            const data = dataset.data[index];
+            
+            if (data > 0) {
+              // Offset to prevent overlapping numbers
+              let yOffset = 0;
+              if (currentChartMetric !== 'waste') {
+                  if (i === 0) yOffset = -4; // 2025 slightly higher
+                  if (i === 1) yOffset = 4;  // Prev Month slightly lower
+                  if (i === 2) yOffset = -8; // 2026 highest
+              } else {
+                  yOffset = -8; // Wastage highest
+              }
+
+              ctx.fillStyle = dataset.borderColor;
+              let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
+              
+              ctx.fillText(valText, element.x, element.y + yOffset);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    };
+
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
-      type: 'line', // Changed to line chart
+      type: 'line',
       data: {
         labels: currentModalData.labels,
         datasets: datasets
@@ -3693,13 +3732,14 @@ document.addEventListener('DOMContentLoaded', () => {
             position: 'left', 
             beginAtZero: true, 
             title: { display: true, text: yAxisTitle, font: {size: 10} },
-            grid: { color: 'rgba(0,0,0,0.04)' } // Softer horizontal grid lines
+            grid: { color: 'rgba(0,0,0,0.04)' } 
           },
           x: {
-            grid: { display: false } // Removes vertical grid lines for a cleaner look
+            grid: { display: false } 
           }
         }
-      }
+      },
+      plugins: [inlineLabelsPlugin] // <-- Activates the custom number drawing
     });
   };
   

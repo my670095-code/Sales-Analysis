@@ -969,11 +969,12 @@
         <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
           
           <!-- NEW: Chart Comparison Toggles -->
+             <!-- NEW: Chart Comparison Toggles -->
           <div style="display:flex; gap:8px; margin-bottom:15px; justify-content:center; flex-wrap:wrap;" id="chartMetricToggles">
-            <button class="btn btn-outline chart-toggle active" data-metric="sales" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">Sales</button>
-            <button class="btn btn-outline chart-toggle" data-metric="adt" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">ADT</button>
-            <button class="btn btn-outline chart-toggle" data-metric="at" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">AT</button>
-            <button class="btn btn-outline chart-toggle" data-metric="waste" style="padding:6px 12px; height:auto; font-size:.8rem; border-radius:20px;">Wastage</button>
+            <button class="btn btn-primary chart-toggle active" data-metric="sales" style="padding:6px 16px; height:auto; font-size:.8rem; border-radius:20px; border:none;">Sales</button>
+            <button class="btn btn-outline chart-toggle" data-metric="adt" style="padding:6px 16px; height:auto; font-size:.8rem; border-radius:20px; border:1px solid var(--border-strong); background:var(--bg);">ADT</button>
+            <button class="btn btn-outline chart-toggle" data-metric="at" style="padding:6px 16px; height:auto; font-size:.8rem; border-radius:20px; border:1px solid var(--border-strong); background:var(--bg);">AT</button>
+            <button class="btn btn-outline chart-toggle" data-metric="waste" style="padding:6px 16px; height:auto; font-size:.8rem; border-radius:20px; border:1px solid var(--border-strong); background:var(--bg);">Wastage</button>
           </div>
 
           <div style="position:relative; height: calc(100% - 50px); width: 100%;">
@@ -3545,7 +3546,7 @@ document.addEventListener('DOMContentLoaded', () => {
       at2026: chartAt2026,
       waste: chartWaste 
     };
-    document.getElementById('storeDayModal').classList.add('open');
+    document.getEle  mentById('storeDayModal').classList.add('open');
     document.getElementById('modalTableView').style.display = 'block';
     document.getElementById('modalChartView').style.display = 'none';
     document.getElementById('viewModeTableBtn').classList.add('active');
@@ -3578,68 +3579,80 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentChartMetric === 'sales') {
       yAxisTitle = 'Sales';
       datasets = [
-        { label: '2025', data: currentModalData.sales2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Prev Month', data: currentModalData.salesPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026', data: currentModalData.sales2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026 Trend', data: currentModalData.sales2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
+        { 
+          label: '2025', 
+          data: currentModalData.sales2025, 
+          borderColor: 'rgba(148,163,184,0.8)', 
+          backgroundColor: 'transparent',
+          borderDash: [5, 5], // Dashed to act as a reference
+          tension: 0.4, 
+          pointRadius: 0, // Hidden points for cleaner look
+          pointHoverRadius: 4,
+          borderWidth: 2 
+        },
+        { 
+          label: 'Prev Month', 
+          data: currentModalData.salesPrev, 
+          borderColor: 'rgba(245,158,11,0.8)', 
+          backgroundColor: 'transparent',
+          borderDash: [5, 5],
+          tension: 0.4, 
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 2 
+        },
+        { 
+          label: '2026', 
+          data: currentModalData.sales2026, 
+          borderColor: '#3b82f6', 
+          backgroundColor: 'rgba(59,130,246,0.15)', // Impact shading
+          tension: 0.4, 
+          fill: true, // Adds the shaded area
+          pointRadius: 2, // Small points on main line
+          pointHoverRadius: 6,
+          borderWidth: 3 
+        }
       ];
     } else if (currentChartMetric === 'adt') {
       yAxisTitle = 'Transactions (ADT)';
       datasets = [
-        { label: '2025 CC', data: currentModalData.adt2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Prev Month CC', data: currentModalData.adtPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026 CC', data: currentModalData.adt2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026 Trend', data: currentModalData.adt2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
+        { label: '2025 CC', data: currentModalData.adt2025, borderColor: 'rgba(148,163,184,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Prev Month CC', data: currentModalData.adtPrev, borderColor: 'rgba(245,158,11,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: '2026 CC', data: currentModalData.adt2026, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', tension: 0.4, fill: true, pointRadius: 2, borderWidth: 3 }
       ];
     } else if (currentChartMetric === 'at') {
       yAxisTitle = 'Avg Ticket (AT)';
       datasets = [
-        { label: '2025 AT', data: currentModalData.at2025, backgroundColor: 'rgba(148,163,184,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Prev Month AT', data: currentModalData.atPrev, backgroundColor: 'rgba(245,158,11,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026 AT', data: currentModalData.at2026, backgroundColor: 'rgba(59,130,246,.85)', borderRadius: 4, barPercentage: 0.7 },
-        { label: '2026 Trend', data: currentModalData.at2026, type: 'line', borderColor: '#1d4ed8', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
+        { label: '2025 AT', data: currentModalData.at2025, borderColor: 'rgba(148,163,184,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'Prev Month AT', data: currentModalData.atPrev, borderColor: 'rgba(245,158,11,0.8)', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: '2026 AT', data: currentModalData.at2026, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', tension: 0.4, fill: true, pointRadius: 2, borderWidth: 3 }
       ];
     } else if (currentChartMetric === 'waste') {
       yAxisTitle = 'Wastage Amount';
       datasets = [
-        { label: 'Wastage', data: currentModalData.waste, backgroundColor: 'rgba(220,38,38,.85)', borderRadius: 4, barPercentage: 0.6 },
-        { label: 'Trend', data: currentModalData.waste, type: 'line', borderColor: '#991b1b', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false }
+        { 
+          label: 'Wastage', 
+          data: currentModalData.waste, 
+          borderColor: '#dc2626', 
+          backgroundColor: 'rgba(220,38,38,0.15)', 
+          tension: 0.4, 
+          fill: true, // Shaded area for waste impact
+          pointRadius: 2, 
+          pointHoverRadius: 6,
+          borderWidth: 3 
+        }
       ];
     }
 
-    // Custom plugin to draw text on top of bars
-    const valueLabelsPlugin = {
-      id: 'valueLabels',
-      afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        ctx.save();
-        chart.data.datasets.forEach((dataset, i) => {
-          if (dataset.type === 'line') return;
-          const meta = chart.getDatasetMeta(i);
-          meta.data.forEach((element, index) => {
-            const data = dataset.data[index];
-            if (data > 0) {
-              ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-main').trim() || '#1e293b';
-              ctx.font = 'bold 10px Inter, sans-serif';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'bottom';
-              let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
-              ctx.fillText(valText, element.x, element.y - 4);
-            }
-          });
-        });
-        ctx.restore();
-      }
-    };
-
     storeDayChartInstance = new Chart(canvas.getContext('2d'), {
-      type: 'bar',
+      type: 'line', // Changed to line chart
       data: {
         labels: currentModalData.labels,
         datasets: datasets
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true, 
+        maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: { 
           legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
@@ -3661,12 +3674,21 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         },
         scales: {
-          y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: yAxisTitle, font: {size: 10} } }
+          y: { 
+            type: 'linear', 
+            position: 'left', 
+            beginAtZero: true, 
+            title: { display: true, text: yAxisTitle, font: {size: 10} },
+            grid: { color: 'rgba(0,0,0,0.04)' } // Softer horizontal grid lines
+          },
+          x: {
+            grid: { display: false } // Removes vertical grid lines for a cleaner look
+          }
         }
-      },
-      plugins: [valueLabelsPlugin]
+      }
     });
   };
+  
   // Toggle Listeners
   const btnTable = document.getElementById('viewModeTableBtn');
   const btnChart = document.getElementById('viewModeChartBtn');
@@ -3678,12 +3700,10 @@ document.addEventListener('DOMContentLoaded', () => {
         viewTable.style.display = 'block';
         viewChart.style.display = 'none';
         
-        // Brighten Table Button
         btnTable.classList.add('btn-primary');
         btnTable.classList.remove('btn-outline');
         btnTable.style.color = '';
         
-        // Dim Chart Button
         btnChart.classList.remove('btn-primary');
         btnChart.classList.add('btn-outline');
         btnChart.style.color = 'var(--text-muted)';
@@ -3693,12 +3713,10 @@ document.addEventListener('DOMContentLoaded', () => {
         viewTable.style.display = 'none';
         viewChart.style.display = 'block';
         
-        // Brighten Chart Button
         btnChart.classList.add('btn-primary');
         btnChart.classList.remove('btn-outline');
         btnChart.style.color = '';
         
-        // Dim Table Button
         btnTable.classList.remove('btn-primary');
         btnTable.classList.add('btn-outline');
         btnTable.style.color = 'var(--text-muted)';

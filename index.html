@@ -1389,6 +1389,16 @@ window.addEventListener('resize', repositionOpenDropdowns);
 window.addEventListener('scroll', repositionOpenDropdowns, true);
 
 // ===== MAIN DASHBOARD =====
+
+function getMaxDayForMonth(targetYear, targetMonth) {
+  const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
+  if (!rows.length) return 31; // Fallback if no data found
+  return Math.max(...rows.map(r => r.day));
+}
+
+(function() {
+  let rawData = [], filteredData = [];
+  // ... rest of the code
 (function() {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
@@ -1468,11 +1478,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     if (prevM < 1) { prevM = 12; prevY = curY - 1; }
     return { curM, prevM, curY, prevY };
   }
-  function getMaxDayForMonth(targetYear, targetMonth) {
-    const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
-    if (!rows.length) return 31; // Fallback if no data found
-    return Math.max(...rows.map(r => r.day));
-  }
+
   function buildTargetMap(rows) {
     const buckets = new Map();
     rows.forEach(r => { if (!r.year || !r.month || r.day == null || !(r.target > 0)) return; const code = r.storeCode || r.store; const k = `${code}||${r.area}||${r.year}||${r.month}`; if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push({ day: r.day, target: r.target }); });
@@ -1776,8 +1782,8 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
 
         filteredData = rawData.filter(r => {
       if (selY.length && selY.length !== totY && !selY.includes(r.year)) return false;
-      // FIX: Strictly check if the month is in the selected list
-      if (!selM.includes(r.month)) return false;
+      // Allow all if none selected, otherwise filter
+      if (selM.length && selM.length !== totM && !selM.includes(r.month)) return false;
       if (selS.length && selS.length !== totS && !selS.includes(r.storeCode)) return false;
       if (selA.length && selA.length !== totA && !selA.includes(r.area)) return false;
       if (dF != null && r.day != null && r.day < dF) return false;
@@ -2776,7 +2782,7 @@ function renderTable(data) {
   
   // FIX: Strictly filter the rows to only show the months currently selected in the filter
   const selM = [...FilterState.month.selected].map(Number);
-  const activeRows = data.filter(r => selM.includes(r.month));
+    const activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
 
   activeRows.forEach(r => {
     const k = `${r.storeCode}||${r.area}||${r.month}`;

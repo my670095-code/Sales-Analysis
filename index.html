@@ -1352,7 +1352,9 @@ document.querySelectorAll('[data-all]').forEach(btn => btn.addEventListener('cli
   if (key === 'month') {
     const selM = [...FilterState.month.selected].map(Number);
     if (selM.length === 1) {
-       const maxDay = getMaxDayForMonth(2026, selM[0]);
+       const selY = [...FilterState.year.selected].map(Number);
+       const activeY = (selY.length === 1) ? selY[0] : 2026;
+       const maxDay = getMaxDayForMonth(activeY, selM[0]);
        $('dayFrom').value = 1; $('dayTo').value = maxDay;
     }
   }
@@ -1694,19 +1696,19 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     FilterState.dow.selected = new Set(FilterState.dow.options.map(o => o.value));
     masterAllOptions.dow = FilterState.dow.options.slice();
 
-    ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+     ['year','month','area','store','dow'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     
-     // Set initial day range based on the latest month present
+    // Set initial day range based on the latest month present
     if (months.length > 0) {
       const latestMonth = Math.max(...months);
-      // Get the year that corresponds to this latest month
       const latestYear = years.includes(2026) ? 2026 : Math.max(...years);
       const maxDay = getMaxDayForMonth(latestYear, latestMonth);
       if (document.getElementById('dayFrom')) document.getElementById('dayFrom').value = 1;
       if (document.getElementById('dayTo')) document.getElementById('dayTo').value = maxDay;
     }
+  } // <--- ADD THIS CLOSING BRACKET
 
-    // ===== KPI UPDATE =====
+  // ===== KPI UPDATE =====
   function updateKPIs(data) {
     let sData = data;
     if (lflOnly) { const s = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode)); sData = data.filter(r => s.has(r.storeCode)); }
@@ -1772,7 +1774,7 @@ window.addEventListener('scroll', repositionOpenDropdowns, true);
     const totS = FilterState.store.options.length, totA = FilterState.area.options.length;
     const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
 
-       filteredData = rawData.filter(r => {
+        filteredData = rawData.filter(r => {
       if (selY.length && selY.length !== totY && !selY.includes(r.year)) return false;
       // FIX: Strictly check if the month is in the selected list
       if (!selM.includes(r.month)) return false;

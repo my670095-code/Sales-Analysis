@@ -1389,16 +1389,12 @@ window.addEventListener('resize', repositionOpenDropdowns);
 window.addEventListener('scroll', repositionOpenDropdowns, true);
 
 // ===== MAIN DASHBOARD =====
-
 function getMaxDayForMonth(targetYear, targetMonth) {
   const rows = rawData.filter(r => r.year === targetYear && r.month === targetMonth && r.day != null);
-  if (!rows.length) return 31; // Fallback if no data found
+  if (!rows.length) return 31;
   return Math.max(...rows.map(r => r.day));
 }
 
-(function() {
-  let rawData = [], filteredData = [];
-  // ... rest of the code
 (function() {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;

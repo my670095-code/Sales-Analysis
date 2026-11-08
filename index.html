@@ -968,7 +968,7 @@
               <!-- ADDED: CHART VIEW -->
         <div id="modalChartView" style="display:none; padding: 20px; height: 400px;">
           
-          <!-- NEW: Chart Comparison Toggles -->
+  
              <!-- NEW: Chart Comparison Toggles -->
           <div style="display:flex; gap:8px; margin-bottom:15px; justify-content:center; flex-wrap:wrap;" id="chartMetricToggles">
             <button class="btn btn-primary chart-toggle active" data-metric="sales" style="padding:6px 16px; height:auto; font-size:.8rem; border-radius:20px; border:none;">Sales</button>
@@ -3083,7 +3083,7 @@ if (wLookup) {
     </tr>`;
        modalDayBody.innerHTML = html;
     storeDayModal.classList.add('open');
-
+  resetChartMetricToggles();
     document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
       const v = btn.dataset.modalDow;
       const isActive = v === 'all' ? modalDowSet.size === 0 : modalDowSet.has(Number(v));
@@ -3546,11 +3546,15 @@ document.addEventListener('DOMContentLoaded', () => {
       at2026: chartAt2026,
       waste: chartWaste 
     };
-    document.getEle  mentById('storeDayModal').classList.add('open');
+    document.getElementById('storeDayModal').classList.add('open');
     document.getElementById('modalTableView').style.display = 'block';
     document.getElementById('modalChartView').style.display = 'none';
-    document.getElementById('viewModeTableBtn').classList.add('active');
-    document.getElementById('viewModeChartBtn').classList.remove('active');
+    document.getElementById('viewModeTableBtn').classList.add('btn-primary');
+    document.getElementById('viewModeTableBtn').classList.remove('btn-outline');
+    document.getElementById('viewModeTableBtn').style.color = '';
+    document.getElementById('viewModeChartBtn').classList.remove('btn-primary');
+    document.getElementById('viewModeChartBtn').classList.add('btn-outline');
+    document.getElementById('viewModeChartBtn').style.color = 'var(--text-muted)';
 
     document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
       const v = btn.dataset.modalDow;
@@ -3565,6 +3569,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let currentChartMetric = 'sales';
+
+  function resetChartMetricToggles() {
+    currentChartMetric = 'sales';
+    document.querySelectorAll('.chart-toggle').forEach(b => {
+      const isSales = b.dataset.metric === 'sales';
+      b.classList.toggle('btn-primary', isSales);
+      b.classList.toggle('active', isSales);
+      b.classList.toggle('btn-outline', !isSales);
+    });
+  }
 
   window.renderStoreDayChart = function() {
     if (!currentModalData) return;

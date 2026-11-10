@@ -1686,33 +1686,36 @@ let faLfl = false, faNew = false, faAds = false;
       const lower = headers.map(h => h.toLowerCase());
       const findCol = kw => { for (let k = 0; k < kw.length; k++) { const idx = lower.findIndex(h => h.includes(kw[k])); if (idx > -1) return idx; } return -1; };
 
-      let cStore = findCol(['str_name','str name','store name','store','branch','shop']);
-      let cCode = lower.findIndex(h => h === 'code' || h === 'store code' || h === 'str code' || h === 'storecode');
-      let cDate = findCol(['dob','date','day']);
-      let cOrders = lower.findIndex(h =>
-        h === 'orders' || h === 'order' || h === 'cc' || h === 'customers' ||
-        h === 'transactions' || h === 'transaction count' || h === 'qty' ||
-        h === 'quantity' || h.includes('order count') || h.includes('trans count')
+      // 1. Find Store Name
+      let cStore = lower.findIndex(h => h.includes('store') || h.includes('branch') || h.includes('shop') || h.includes('str_name'));
+      
+      // 2. Find Date
+      let cDate = lower.findIndex(h => h.includes('date') || h.includes('dob') || h === 'day');
+      
+      // 3. Find Orders/CC
+      let cOrders = lower.findIndex(h => 
+        h === 'cc' || h.includes('order') || h.includes('customer') || 
+        h.includes('transaction') || h.includes('trans count') || h.includes('qty')
       );
-      let cGross = findCol(['gross amount','gross']);
-      let cNet = findCol(['net amount','net sales','net']);
-      let cTax = lower.findIndex(h => h.includes('incl') && h.includes('tax'));
-      if (cTax < 0) cTax = lower.findIndex(h => h === 'tax' || h.includes('tax amount'));
-      let cAmt = lower.findIndex(h => h.includes('amount') && !h.includes('gross') && !h.includes('net') && !h.includes('tax'));
-      let cTarget = lower.findIndex(h => h === 'target' || h.includes('target') || h === 'budget' || h.includes('plan'));
-      let cArea = lower.findIndex(h =>
-        h === 'area manager' || h === 'manager' || h === 'area' || h === 'am' ||
-        h === 'am name' || h === 'area manager name' || h === 'account manager'
-      );
-      let cSegment = findCol(['segment']);
-      let cFormat = findCol(['format']);
+      
+      // 4. Find Net Sales (Prioritize 'net' over 'gross')
+      let cNet = lower.findIndex(h => h.includes('net') && (h.includes('amount') || h.includes('sales') || h === 'net'));
+      let cGross = lower.findIndex(h => h.includes('gross') || (h.includes('amount') && !h.includes('tax') && !h.includes('net')));
+      
+      // 5. Find Target & Area
+      let cTarget = lower.findIndex(h => h.includes('target') || h.includes('budget') || h.includes('plan'));
+      let cArea = lower.findIndex(h => h.includes('manager') || h === 'area' || h === 'am' || h.includes('account'));
+      let cSegment = lower.findIndex(h => h.includes('segment'));
+      let cFormat = lower.findIndex(h => h.includes('format'));
+      let cCode = lower.findIndex(h => h === 'code' || h.includes('store code') || h.includes('str code'));
+      let cTax = lower.findIndex(h => h.includes('tax'));
 
-      if (cStore < 0) cStore = 0; 
-      if (cDate < 0) cDate = 1; 
-      if (cOrders < 0) cOrders = 2;
-      if (cAmt < 0) cAmt = 3; 
-      if (cGross < 0) cGross = 4; 
-      if (cArea < 0) cArea = -1;
+      // 6. Safe Fallbacks (Don't default to index 0/1 if not found, default to -1 to skip)
+      if (cStore < 0) cStore = 0; // Assuming Store is always first if not named
+      if (cDate < 0) cDate = -1; 
+      if (cOrders < 0) cOrders = -1;
+      if (cNet < 0) cNet = -1;
+      if (cGross < 0) cGross = -1;
 
       const rows = []; 
       let skipped = 0;
@@ -1816,6 +1819,14 @@ let faLfl = false, faNew = false, faAds = false;
   fileInput.addEventListener('change', e => {
     const file = e.target.files[0]; if (!file) return;
     loadingState.style.display = 'flex';
+        // Catch global errors during file reading
+    window.onerror = function(msg, url, line, col, error) {
+        console.error(error);
+        document.getElementById('errorBox').style.display = 'block';
+        document.getElementById('errorText').textContent = "Crash: " + msg;
+        document.getElementById('loadingState').style.display = 'none';
+        return false;
+    };
     emptyState.style.display = 'none';
     errorBox.style.display = 'none';
     filterBar.classList.remove('show');

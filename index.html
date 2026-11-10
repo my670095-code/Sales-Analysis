@@ -1675,8 +1675,12 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       if (!sheet) throw new Error('No sheet found');
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
       if (!jsonData || jsonData.length < 2) throw new Error('Sheet empty');
+      
       let hIdx = 0;
-      for (let i = 0; i < Math.min(jsonData.length, 10); i++) { if (jsonData[i] && jsonData[i].some(c => c != null && String(c).trim() !== '')) { hIdx = i; break; } }
+      for (let i = 0; i < Math.min(jsonData.length, 10); i++) { 
+        if (jsonData[i] && jsonData[i].some(c => c != null && String(c).trim() !== '')) { hIdx = i; break; } 
+      }
+      
       const headers = jsonData[hIdx].map(h => h == null ? '' : String(h).trim());
       const lower = headers.map(h => h.toLowerCase());
       const findCol = kw => { for (let k = 0; k < kw.length; k++) { const idx = lower.findIndex(h => h.includes(kw[k])); if (idx > -1) return idx; } return -1; };
@@ -1684,108 +1688,96 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       let cStore = findCol(['str_name','str name','store name','store','branch','shop']);
       let cCode = lower.findIndex(h => h === 'code' || h === 'store code' || h === 'str code' || h === 'storecode');
       let cDate = findCol(['dob','date','day']);
-   let cOrders = lower.findIndex(h =>
-  h === 'orders' || h === 'order' || h === 'cc' || h === 'customers' ||
-  h === 'transactions' || h === 'transaction count' || h === 'qty' ||
-  h === 'quantity' || h.includes('order count') || h.includes('trans count')
-);
+      let cOrders = lower.findIndex(h =>
+        h === 'orders' || h === 'order' || h === 'cc' || h === 'customers' ||
+        h === 'transactions' || h === 'transaction count' || h === 'qty' ||
+        h === 'quantity' || h.includes('order count') || h.includes('trans count')
+      );
       let cGross = findCol(['gross amount','gross']);
       let cNet = findCol(['net amount','net sales','net']);
       let cTax = lower.findIndex(h => h.includes('incl') && h.includes('tax'));
       if (cTax < 0) cTax = lower.findIndex(h => h === 'tax' || h.includes('tax amount'));
       let cAmt = lower.findIndex(h => h.includes('amount') && !h.includes('gross') && !h.includes('net') && !h.includes('tax'));
       let cTarget = lower.findIndex(h => h === 'target' || h.includes('target') || h === 'budget' || h.includes('plan'));
-         let cArea = lower.findIndex(h =>
-  h === 'area manager' || h === 'manager' || h === 'area' || h === 'am' ||
-  h === 'am name' || h === 'area manager name' || h === 'account manager'
-);
+      let cArea = lower.findIndex(h =>
+        h === 'area manager' || h === 'manager' || h === 'area' || h === 'am' ||
+        h === 'am name' || h === 'area manager name' || h === 'account manager'
+      );
       let cSegment = findCol(['segment']);
       let cFormat = findCol(['format']);
 
-// Fallback lookup table (your list) — used if the file lacks a Segment column
-const SEGMENT_BY_CODE = {
-  '112':'AS USUAL','156':'AS USUAL','242':'AS USUAL','246':'AS USUAL','247':'AS USUAL',
-  '266':'AS USUAL','294':'AS USUAL','72':'AS USUAL','281':'AS USUAL','47':'AS USUAL',
-  '101':'DRIVE THRU KIOSKS','128':'DRIVE THRU KIOSKS','136':'DRIVE THRU KIOSKS',
-  '142':'DRIVE THRU KIOSKS','159':'DRIVE THRU KIOSKS','219':'DRIVE THRU KIOSKS',
-  '286':'DRIVE THRU KIOSKS','291':'DRIVE THRU KIOSKS','31':'DRIVE THRU KIOSKS',
-  '229':'AS USUAL','231':'AS USUAL','234':'AS USUAL','278':'AS USUAL','284':'AS USUAL',
-  '295':'AS USUAL','308':'AS USUAL','312':'AS USUAL','91':'AS USUAL','233':'HYBRID',
-  '309':'PLANNED','263':'AS USUAL','217':'HYBRID','270':'HYBRID','280':'HYBRID',
-  '293':'HYBRID','296':'HYBRID','204':'AS USUAL','257':'AS USUAL','32':'AS USUAL',
-  '45':'AS USUAL','74':'AS USUAL','176':'DRIVE THRU KIOSKS','221':'DRIVE THRU KIOSKS',
-  '236':'DRIVE THRU KIOSKS','285':'DRIVE THRU KIOSKS','46':'DRIVE THRU KIOSKS',
-  '214':'HYBRID','273':'HYBRID','122':'AS USUAL','194':'AS USUAL','200':'AS USUAL',
-  '218':'AS USUAL','287':'AS USUAL','302':'AS USUAL','303':'AS USUAL','306':'AS USUAL',
-  '307':'AS USUAL','117':'DRIVE THRU KIOSKS','121':'DRIVE THRU KIOSKS',
-  '160':'DRIVE THRU KIOSKS','288':'DRIVE THRU KIOSKS','222':'HYBRID','240':'HYBRID',
-  '245':'HYBRID','265':'HYBRID','304':'AS USUAL','305':'AS USUAL','145':'DRIVE THRU KIOSKS',
-  '161':'DRIVE THRU KIOSKS','213':'DRIVE THRU KIOSKS','110':'HYBRID','251':'HYBRID',
-  '282':'HYBRID'
-};
+      if (cStore < 0) cStore = 0; 
+      if (cDate < 0) cDate = 1; 
+      if (cOrders < 0) cOrders = 2;
+      if (cAmt < 0) cAmt = 3; 
+      if (cGross < 0) cGross = 4; 
+      if (cArea < 0) cArea = -1;
 
-const FORMAT_BY_CODE = {
-  '112':'CORPORATE & OFFICES','156':'CORPORATE & OFFICES','246':'CORPORATE & OFFICES','247':'CORPORATE & OFFICES','266':'CORPORATE & OFFICES',
-  '242':'UNIVERSITIES - BOYS','72':'UNIVERSITIES - GIRLS','294':'UNIVERSITIES - GIRLS',
-  '281':'NEIGHBOURHOOD','31':'DRIVE THRU','101':'DRIVE THRU','128':'DRIVE THRU','136':'DRIVE THRU','142':'DRIVE THRU',
-  '159':'DRIVE THRU','219':'DRIVE THRU','291':'DRIVE THRU','286':'DRIVE THRU','47':'NEIGHBOURHOOD',
-  '91':'HOSPITAL','229':'HOSPITAL','231':'HOSPITAL','234':'HOSPITAL','278':'HOSPITAL','284':'HOSPITAL',
-  '295':'HOSPITAL','308':'HOSPITAL','312':'HOSPITAL','233':'HOSPITAL','309':'PLANNED',
-  '217':'NEIGHBOURHOOD','270':'NEIGHBOURHOOD','296':'NEIGHBOURHOOD','293':'NEIGHBOURHOOD','263':'DRIVE THRU','280':'AIRPORT',
-  '74':'HOSPITAL','32':'NEIGHBOURHOOD','45':'NEIGHBOURHOOD','204':'NEIGHBOURHOOD',
-  '46':'DRIVE THRU','176':'DRIVE THRU','285':'DRIVE THRU','214':'NEIGHBOURHOOD','273':'NEIGHBOURHOOD',
-  '221':'DRIVE THRU','236':'DRIVE THRU','257':'NEIGHBOURHOOD',
-  '122':'CORPORATE & OFFICES','218':'HOSPITAL','194':'CORPORATE CATERING','200':'NEIGHBOURHOOD','287':'NEIGHBOURHOOD',
-  '302':'NEIGHBOURHOOD','303':'NEIGHBOURHOOD',
-  '306':'NEIGHBOURHOOD','307':'NEIGHBOURHOOD','117':'DRIVE THRU','121':'DRIVE THRU','160':'DRIVE THRU','288':'DRIVE THRU',
-  '245':'MALLS','222':'NEIGHBOURHOOD','240':'NEIGHBOURHOOD','265':'NEIGHBOURHOOD',
-  '304':'NEIGHBOURHOOD','305':'NEIGHBOURHOOD','145':'DRIVE THRU','161':'DRIVE THRU','213':'DRIVE THRU',
-  '251':'CORPORATE & OFFICES','282':'CORPORATE & OFFICES','110':'NEIGHBOURHOOD'
-};
-
-    if (cStore < 0) cStore = 0; if (cDate < 0) cDate = 1; if (cOrders < 0) cOrders = 2;
-      if (cAmt < 0) cAmt = 3; if (cGross < 0) cGross = 4; if (cArea < 0) cArea = -1;
-
-      const rows = []; let skipped = 0;
+      const rows = []; 
+      let skipped = 0;
+      
       for (let i = hIdx + 1; i < jsonData.length; i++) {
-        const row = jsonData[i]; if (!row || !row.length) { skipped++; continue; }
-        const raw = row[cStore]; if (raw == null || String(raw).trim() === '') { skipped++; continue; }
+        const row = jsonData[i]; 
+        if (!row || !row.length) { skipped++; continue; }
+        const raw = row[cStore]; 
+        if (raw == null || String(raw).trim() === '') { skipped++; continue; }
+        
         const store = cleanText(raw, 'Unknown');
         const code = deriveStoreCode(cCode >= 0 ? row[cCode] : null, store);
         const dob = parseDate(row[cDate]);
         const orders = Number(String(row[cOrders] ?? '').replace(/,/g, '')) || 0;
         const gross = Number(String(row[cGross] ?? '').replace(/,/g, '')) || 0;
+        
         let target = 0;
         if (cTarget >= 0) {
           const tv = row[cTarget];
-          if (tv != null && String(tv).trim() !== '' && !isFormula(tv)) { const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0; if (n > 0) target = n; }
+          if (tv != null && String(tv).trim() !== '' && !isFormula(tv)) { 
+            const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0; 
+            if (n > 0) target = n; 
+          }
         }
-    let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
-if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
-      const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
-      const segment = segRaw || SEGMENT_BY_CODE[code] || 'UNMAPPED';
-      const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
-      const format = fmtRaw || FORMAT_BY_CODE[code] || 'UNMAPPED';
-           const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
+        
+        let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
+        if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
+        
+        const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
+        const segment = segRaw || 'UNMAPPED'; // Fallback tables omitted for clean paste, this is fine
+        const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
+        const format = fmtRaw || 'UNMAPPED';
+        
+        const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
+        
         let net = 0;
         if (gross > 0) net = gross - (tax || 0);
         else if (explicitNet !== null) net = explicitNet;
         else if (amt !== null) net = amt;
         else net = gross;
-        rows.push({ store, storeCode: code, dob, dobStr: toYMD(dob), year: dob ? dob.getFullYear() : null, month: dob ? dob.getMonth() + 1 : null, day: dob ? dob.getDate() : null, monthLabel: dob ? MONTHS[dob.getMonth()] : '', orders, amount: net, gross, net, target, area, segment, format });
+        
+        rows.push({ 
+          store, storeCode: code, dob, dobStr: toYMD(dob), 
+          year: dob ? dob.getFullYear() : null, 
+          month: dob ? dob.getMonth() + 1 : null, 
+          day: dob ? dob.getDate() : null, 
+          monthLabel: dob ? MONTHS[dob.getMonth()] : '', 
+          orders, amount: net, gross, net, target, area, segment, format 
+        });
       }
 
       if (!rows.length) throw new Error('No valid rows');
       console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
+      
       const clean = rows.filter(r => {
         const l = String(r.area || '').toLowerCase().trim();
         return l !== 'closed';
       });
+      
       rawData = clean;
-      window.__rawData = clean; window.__skippedRows = skipped;
+      window.__rawData = clean; 
+      window.__skippedRows = skipped;
       const nStores = new Set(clean.map(r => r.storeCode)).size;
+      
       rowCountBadge.textContent = `${nStores} stores • ${clean.length} rows`;
       loadingState.style.display = 'none';
       emptyState.style.display = 'none';
@@ -1795,18 +1787,19 @@ if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
       kpiPanel.style.display = 'grid';
       chartsPanel.style.display = 'grid';
       tablePanel.style.display = 'block';
-      emptyState.style.display = 'none';
-            const faPanelShow = $('formatAmPanel'); if (faPanelShow) faPanelShow.style.display = 'block';
+      
       if ($('executiveSummary')) $('executiveSummary').style.display = 'block';
-      dayFrom.value = 1; dayTo.value = 31;
+      dayFrom.value = 1; 
+      dayTo.value = 31;
       applyFiltersAndRender();
 
-           if (name && uploadLabel) {
+      if (name && uploadLabel) {
         uploadLabel.textContent = 'Loaded';
-        uploadLabel.title = name; // Shows full filename on hover
+        uploadLabel.title = name;
       }
       showToast(`Loaded ${nStores} stores`, 'success');
       addNotif(`Uploaded ${name || 'file'} (${nStores} stores)`);
+      
     } catch (err) {
       console.error(err);
       loadingState.style.display = 'none';
@@ -1817,7 +1810,6 @@ if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
       showToast('Failed: ' + err.message, 'error');
     }
   }
-
       if (!rows.length) throw new Error('No valid rows');
       console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
      const clean = rows.filter(r => {

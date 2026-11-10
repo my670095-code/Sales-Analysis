@@ -422,6 +422,7 @@
     <nav class="sidebar-nav">
       <button class="tab-btn" data-tab="overview"><i class="fas fa-chart-pie"></i> Overview</button>
       <button class="tab-btn active" data-tab="table"><i class="fas fa-table"></i> Detailed</button>
+            <button class="tab-btn" data-tab="formatam"><i class="fas fa-layer-group"></i> Format / AM</button>
       <button class="tab-btn" data-tab="yoy"><i class="fas fa-chart-line"></i> YoY Compare</button>
       <button class="tab-btn" data-tab="leaderboard"><i class="fas fa-trophy"></i> Leaderboard</button>
       <button class="tab-btn" data-tab="heatmap"><i class="fas fa-fire"></i> Heatmap</button>
@@ -896,7 +897,63 @@
       </div>
     </div>
   </div>
-
+  <!-- FORMAT / AM TAB -->
+  <div class="view-section" id="tabFormatAm">
+    <div class="table-container" id="formatAmPanel" style="display:none;">
+      <div class="table-header-bar">
+        <h3><i class="fas fa-layer-group"></i> Format / AM Performance</h3>
+        <div class="table-controls">
+          <div style="display:flex; background:var(--bg); border-radius:9px; padding:3px; border:1px solid var(--border-strong);">
+            <button class="toggle-btn active" id="faGroupFormat" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">By Format</button>
+            <button class="toggle-btn" id="faGroupAm" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">By AM</button>
+            <button class="toggle-btn" id="faGroupBoth" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">Format × AM</button>
+          </div>
+          <button class="toggle-btn lfl-toggle" id="faLflToggle"><i class="fas fa-filter"></i> LFL Only</button>
+          <button class="toggle-btn" id="faNewStoreToggle" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+          <button class="toggle-btn" id="faAdsToggle"><i class="fas fa-calculator"></i> ADS</button>
+          <button class="export-btn excel" id="faExportExcel"><i class="fas fa-file-excel"></i> Excel</button>
+          <button class="export-btn pdf" id="faExportPdf"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="formatAmTable">
+          <thead>
+            <tr>
+              <th colspan="2" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+              <th colspan="4" class="group-2025" id="faHdr2025">2025</th>
+              <th colspan="4" class="group-prev" id="faHdrPrev">Prev Month</th>
+              <th colspan="4" class="group-2026" id="faHdr2026">2026</th>
+              <th colspan="3" class="group-ratios">Ratios</th>
+              <th colspan="3" class="group-waste">Wastage</th>
+            </tr>
+            <tr>
+              <th class="left-cell" data-fasort="format">Format</th>
+              <th class="left-cell" data-fasort="am">AM</th>
+              <th class="group-2025" data-fasort="days2025">Days</th>
+              <th class="group-2025" data-fasort="net2025">Sales</th>
+              <th class="group-2025">ADT</th>
+              <th class="group-2025">AT</th>
+              <th class="group-prev" data-fasort="prevDays">Days</th>
+              <th class="group-prev" data-fasort="prevNet">Sales</th>
+              <th class="group-prev">ADT</th>
+              <th class="group-prev">AT</th>
+              <th class="group-2026" data-fasort="days2026">Days</th>
+              <th class="group-2026" data-fasort="net2026">Sales</th>
+              <th class="group-2026">ADT</th>
+              <th class="group-2026">AT</th>
+              <th class="group-ratios" data-fasort="lfl">LFL</th>
+              <th class="group-ratios" data-fasort="tgt">Tgt</th>
+              <th class="group-ratios" data-fasort="mom">MoM</th>
+              <th class="group-waste" data-fasort="wasteCost">Waste</th>
+              <th class="group-waste" data-fasort="wastePct">Waste %</th>
+              <th class="group-waste" data-fasort="wasteQty">Waste Qty</th>
+            </tr>
+          </thead>
+          <tbody id="formatAmBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
   <div id="emptyState" class="empty-state">
     <i class="fas fa-file-excel"></i>
     <h2>No data loaded</h2>
@@ -1105,7 +1162,7 @@ $('themeToggle').addEventListener('click', () => {
 function switchTab(tabName) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
   document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable', yoy: 'tabYoy', wastage: 'tabWastage' };
+  const sectionIds = { overview: 'tabOverview', insights: 'tabInsights', leaderboard: 'tabLeaderboard', heatmap: 'tabHeatmap', table: 'tabTable', yoy: 'tabYoy', wastage: 'tabWastage', formatam: 'tabFormatAm' };
   const target = $(sectionIds[tabName]);
   if (target) target.classList.add('active');
   
@@ -1137,6 +1194,7 @@ function switchTab(tabName) {
     if (tabName === 'overview') renderCharts(window.__filteredData);
     if (tabName === 'yoy') renderYoY(window.__filteredData);
     if (tabName === 'wastage') renderWastage();
+        if (tabName === 'formatam' && typeof renderFormatAm === 'function') renderFormatAm(window.__filteredData);
   } else {
     showToast('Please upload a file first', 'info');
   }
@@ -1653,6 +1711,7 @@ const FORMAT_BY_CODE = {
       chartsPanel.style.display = 'grid';
       tablePanel.style.display = 'block';
       emptyState.style.display = 'none';
+            const faPanelShow = $('formatAmPanel'); if (faPanelShow) faPanelShow.style.display = 'block';
       if ($('executiveSummary')) $('executiveSummary').style.display = 'block';
       dayFrom.value = 1; dayTo.value = 31;
       applyFiltersAndRender();
@@ -1683,6 +1742,7 @@ const FORMAT_BY_CODE = {
     kpiPanel.style.display = 'none';
     chartsPanel.style.display = 'none';
     tablePanel.style.display = 'none';
+        const faPanelHide = $('formatAmPanel'); if (faPanelHide) faPanelHide.style.display = 'none';
     const reader = new FileReader();
     reader.onload = async evt => {
       const buf = evt.target.result;
@@ -1889,9 +1949,11 @@ const FORMAT_BY_CODE = {
     renderHeatmap(filteredData);
     renderTable(filteredData);
     renderYoY(filteredData);
-    
-    // ADD THIS LINE to refresh Wastage tab live
-    if (typeof window.renderWastage === 'function') window.renderWastage();
+        // FIX #1: Only re-render heavy tabs when they are actually visible
+    const wSection = document.getElementById('tabWastage');
+    if (wSection && wSection.classList.contains('active') && typeof window.renderWastage === 'function') window.renderWastage();
+    const faSection = document.getElementById('tabFormatAm');
+    if (faSection && faSection.classList.contains('active') && typeof renderFormatAm === 'function') renderFormatAm(filteredData);
   }
   window.applyFiltersAndRender = applyFiltersAndRender;
 
@@ -1912,8 +1974,13 @@ const FORMAT_BY_CODE = {
     ['year','month','area','store','dow','segment','format'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     
     lflOnly = false; $('lflToggle').classList.remove('active');
-    newStoreOnly = false; $('newStoreToggle').classList.remove('active'); // <-- ADD THIS LINE
-    
+    newStoreOnly = false; $('newStoreToggle').classList.remove('active');
+
+    // FIX #4: Also reset Format/AM internal toggles
+       faLfl = false; faNew = false; faAds = false; faSort = { key: null, dir: 'desc' };
+    ['faLflToggle','faNewStoreToggle','faAdsToggle'].forEach(id => {
+      const el = $(id); if (el) el.classList.remove('active');
+    });   
     currentSort = { key: null, dir: 'desc' };
     globalSearchTerm = ''; $('globalSearch').value = '';
     applyFiltersAndRender();
@@ -2890,8 +2957,8 @@ function renderTable(data) {
       orders2025: 0,
       net2026: 0,
       orders2026: 0,
-      days2025: 0,
-      days2026: 0
+         days2025Set: new Set(),
+      days2026Set: new Set()
     });
     const g = gMap.get(k);
     if (!g.targetLoaded) {
@@ -2900,8 +2967,8 @@ function renderTable(data) {
       g.target = gi.target;
       g.targetLoaded = true;
     }
-    if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0) g.days2025++; }
-    else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0) g.days2026++; }
+        if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0 && r.day != null) g.days2025Set.add(r.day); }
+    else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
   });
 
   const ctx = getMonthContext();
@@ -2914,7 +2981,8 @@ function renderTable(data) {
   const tS = FilterState.store.options.length, tA = FilterState.area.options.length;
   const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
 
-  const prevMap = new Map();
+    const prevMap = new Map();
+  const prevDaySets = new Map();   // FIX #5: track unique days
   rawData.forEach(r => {
     if (r.year !== ctx.prevY || r.month !== ctx.prevM) return;
     if (sS.length && sS.length !== tS && !sS.includes(r.storeCode)) return;
@@ -2922,12 +2990,23 @@ function renderTable(data) {
     if (dF != null && r.day != null && r.day < dF) return;
     if (dT != null && r.day != null && r.day > dT) return;
     const k = `${r.storeCode}||${r.area}`;
-    const cur = prevMap.get(k) || { net: 0, orders: 0, activeDays: 0 };
-    cur.net += r.net; cur.orders += r.orders; if (r.net > 0) cur.activeDays++;
+        const cur = prevMap.get(k) || { net: 0, orders: 0, activeDays: 0 };
+    cur.net += r.net; cur.orders += r.orders;
     prevMap.set(k, cur);
+    if (r.net > 0 && r.day != null) {
+      if (!prevDaySets.has(k)) prevDaySets.set(k, new Set());
+      prevDaySets.get(k).add(r.day);
+    }
   });
-
-  let rows = [...gMap.values()];
+  prevMap.forEach((v, k) => {
+    const s = prevDaySets.get(k);
+    v.activeDays = s ? s.size : 0;
+  });
+  let rows = [...gMap.values()].map(g => ({
+    ...g,
+    days2025: g.days2025Set.size,
+    days2026: g.days2026Set.size
+  }));
   const rankMap = new Map();
   [...rows].sort((a, b) => b.net2026 - a.net2026).slice(0, 3).forEach((r, i) => rankMap.set(r.storeCode, i + 1));
 
@@ -3364,6 +3443,373 @@ ${clone.outerHTML}
     const skipped = window.__skippedRows || 0;
     addNotif(`Data Quality: ${raw.length} rows, ${missing} missing targets, ${skipped} skipped`);
     showToast(`📊 ${raw.length} rows · ${stores} stores · ${managers} managers · ${missing} missing targets · ${skipped} skipped`, 'info');
+  });
+      // ===== FORMAT / AM VIEW =====
+  let faGroupMode = 'format';
+  let faLfl = false, faNew = false, faAds = false;
+  let faSort = { key: null, dir: 'desc' };
+
+  function renderFormatAm(data) {
+    if (!data || !data.length) return;
+    const tm = window.__targetMaps || buildTargetMap(rawData);
+    const sY = window.__salesYear;
+    const ctx = getMonthContext();
+
+    const h25 = $('faHdr2025'); if (h25) h25.textContent = '2025';
+    const hp  = $('faHdrPrev'); if (hp)  hp.textContent  = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
+    const h26 = $('faHdr2026'); if (h26) h26.textContent = '2026';
+
+    const keyOf = r => {
+      if (faGroupMode === 'format') return r.format || 'UNMAPPED';
+      if (faGroupMode === 'am')     return r.area   || 'Unknown';
+      return `${r.format || 'UNMAPPED'}||${r.area || 'Unknown'}`;
+    };
+
+    const selM = [...FilterState.month.selected].map(Number);
+    const activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
+
+    const gMap = new Map();
+    activeRows.forEach(r => {
+      const k = keyOf(r);
+      if (!gMap.has(k)) gMap.set(k, {
+        key: k,
+        format: faGroupMode === 'am'     ? '—' : (r.format || 'UNMAPPED'),
+        am:     faGroupMode === 'format' ? '—' : (r.area   || 'Unknown'),
+        target: 0,
+        net2025: 0, orders2025: 0, days2025Set: new Set(),
+        net2026: 0, orders2026: 0, days2026Set: new Set(),
+        netPrev: 0, ordersPrev: 0, daysPrevSet: new Set(),
+        wasteCost: 0, wasteQty: 0,
+        stores: new Set(),
+        _seenTargets: new Set()
+      });
+      const g = gMap.get(k);
+      g.stores.add(r.storeCode);
+
+      if (r.year != null && r.month != null) {
+        const tk = `${r.storeCode}||${r.area}||${r.month}`;
+        if (!g._seenTargets.has(tk)) {
+          g._seenTargets.add(tk);
+          const gi = computeGroupTarget(tm, data, data, r.storeCode, r.area, sY != null ? sY : r.year, r.month, false);
+          g.target += gi.target;
+        }
+      }
+      if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0 && r.day != null) g.days2025Set.add(r.day); }
+      else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
+    });
+    
+
+    // FIX #2: Previous-month aggregation from rawData, honoring Store/Area filters
+    // (mirrors renderTable so Prev column matches Detailed exactly)
+    const pS = FilterState.store.selected, tS_ = FilterState.store.options.length;
+    const pA = FilterState.area.selected,  tA_ = FilterState.area.options.length;
+    rawData.forEach(r => {
+      if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
+      if (pS.size && pS.size !== tS_ && !pS.has(r.storeCode)) return;
+      if (pA.size && pA.size !== tA_ && !pA.has(r.area)) return;
+      const g = gMap.get(keyOf(r)); if (!g) return;
+      g.netPrev += r.net; g.ordersPrev += r.orders;
+      if (r.net > 0) g.daysPrevSet.add(r.day);
+    });
+
+    // FIX #3: O(n) wastage lookup (pre-built Map instead of data.find() per row)
+    try {
+      if (typeof getFilteredWastage === 'function' && typeof buildWastageIndex === 'function') {
+        const wIdx = buildWastageIndex(getFilteredWastage(), data);
+        const storeCodeToRow = new Map();
+        data.forEach(r => { if (!storeCodeToRow.has(r.storeCode)) storeCodeToRow.set(r.storeCode, r); });
+        wIdx.forEach(w => {
+          const r = storeCodeToRow.get(w.storeCode);
+          if (!r) return;
+          const g = gMap.get(keyOf(r)); if (!g) return;
+          g.wasteCost += w.wastageCost || 0;
+          g.wasteQty  += w.wastageQty  || 0;
+        });
+      }
+    } catch(e) {}
+
+    let rows = [...gMap.values()].map(g => ({
+      ...g,
+      days2025: g.days2025Set.size,
+      days2026: g.days2026Set.size,
+      daysPrev: g.daysPrevSet.size,
+      storeCount: g.stores.size,
+      lfl: g.net2025 > 0 ? g.net2026 / g.net2025 : null,
+      tgt: g.target   > 0 ? g.net2026 / g.target   : null,
+      mom: g.netPrev  > 0 ? g.net2026 / g.netPrev  : null,
+      wastePct: g.net2026 > 0 ? g.wasteCost / g.net2026 : null
+    }));
+
+    if (faLfl) rows = rows.filter(r => r.net2025 > 0);
+    else if (faNew) {
+      const storesWith2025 = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
+      rows = rows.filter(r => [...r.stores].every(sc => !storesWith2025.has(sc)));
+    }
+
+    // Sort
+    const sorted = [...rows];
+    if (faSort.key) {
+      sorted.sort((a, b) => {
+        let va, vb;
+        switch (faSort.key) {
+          case 'format': va = a.format; vb = b.format; break;
+          case 'am': va = a.am; vb = b.am; break;
+          case 'net2025': va = a.net2025; vb = b.net2025; break;
+          case 'net2026': va = a.net2026; vb = b.net2026; break;
+          case 'days2025': va = a.days2025; vb = b.days2025; break;
+          case 'days2026': va = a.days2026; vb = b.days2026; break;
+          case 'prevNet': va = a.netPrev; vb = b.netPrev; break;
+          case 'prevDays': va = a.daysPrev; vb = b.daysPrev; break;
+          case 'lfl': va = a.lfl || 0; vb = b.lfl || 0; break;
+          case 'tgt': va = a.tgt || 0; vb = b.tgt || 0; break;
+          case 'mom': va = a.mom || 0; vb = b.mom || 0; break;
+          case 'wasteCost': va = a.wasteCost; vb = b.wasteCost; break;
+          case 'wastePct': va = a.wastePct || 0; vb = b.wastePct || 0; break;
+          case 'wasteQty': va = a.wasteQty; vb = b.wasteQty; break;
+          default: va = 0; vb = 0;
+        }
+        if (typeof va === 'string') return faSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        return faSort.dir === 'asc' ? va - vb : vb - va;
+      });
+    } else {
+      sorted.sort((a, b) => b.net2026 - a.net2026);
+    }
+
+    const tot = { target:0, net2025:0, orders2025:0, days2025:0, netPrev:0, ordersPrev:0, daysPrev:0, net2026:0, orders2026:0, days2026:0, wasteCost:0, wasteQty:0 };
+    let html = '';
+    sorted.forEach(g => {
+      tot.target += g.target;
+      tot.net2025 += g.net2025; tot.orders2025 += g.orders2025; tot.days2025 += g.days2025;
+      tot.netPrev += g.netPrev; tot.ordersPrev += g.ordersPrev; tot.daysPrev += g.daysPrev;
+      tot.net2026 += g.net2026; tot.orders2026 += g.orders2026; tot.days2026 += g.days2026;
+      tot.wasteCost += g.wasteCost; tot.wasteQty += g.wasteQty;
+
+      const at25 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
+      const atP  = g.ordersPrev > 0 ? g.netPrev  / g.ordersPrev  : 0;
+      const at26 = g.orders2026 > 0 ? g.net2026 / g.orders2026 : 0;
+
+      const dN25 = faAds && g.days2025 > 0 ? g.net2025 / g.days2025 : g.net2025;
+      const dN26 = faAds && g.days2026 > 0 ? g.net2026 / g.days2026 : g.net2026;
+      const dNp  = faAds && g.daysPrev > 0 ? g.netPrev / g.daysPrev : g.netPrev;
+      const dO25 = faAds && g.days2025 > 0 ? g.orders2025 / g.days2025 : g.orders2025;
+      const dO26 = faAds && g.days2026 > 0 ? g.orders2026 / g.days2026 : g.orders2026;
+      const dOp  = faAds && g.daysPrev > 0 ? g.ordersPrev / g.daysPrev : g.ordersPrev;
+
+      const lflF = fmtSignedPct(g.lfl || NaN);
+      const tgtF = fmtSignedPct(g.tgt || NaN);
+      const momF = fmtSignedPct(g.mom || NaN);
+      const cls = (g.net2025 > 0 || g.net2026 > 0) ? (g.net2026 >= g.net2025 ? 'cell-positive' : 'cell-negative') : '';
+      const wCls = g.wastePct != null ? (g.wastePct > 0.05 ? 'cell-negative' : '') : '';
+
+      html += `<tr class="store-clickable" data-fa-key="${escapeAttr(g.key)}">
+        <td class="left-cell col-store"><strong>${escapeHtml(g.format)}</strong></td>
+        <td class="left-cell col-manager">${escapeHtml(g.am)}${g.storeCount ? `<span style="color:var(--text-light); font-size:.65rem; margin-left:6px;">(${g.storeCount})</span>` : ''}</td>
+        <td class="cell-2025">${g.days2025 || 0}</td>
+        <td class="cell-2025">${fmtCur(dN25)}</td>
+        <td class="cell-2025">${fmtNum(dO25)}</td>
+        <td class="cell-2025">${fmtAT(at25)}</td>
+        <td class="cell-prev">${g.daysPrev || 0}</td>
+        <td class="cell-prev">${fmtCur(dNp)}</td>
+        <td class="cell-prev">${fmtNum(dOp)}</td>
+        <td class="cell-prev">${fmtAT(atP)}</td>
+        <td class="cell-2026 ${cls}">${g.days2026 || 0}</td>
+        <td class="cell-2026 ${cls}">${fmtCur(dN26)}</td>
+        <td class="cell-2026 ${cls}">${fmtNum(dO26)}</td>
+        <td class="cell-2026 ${cls}">${fmtAT(at26)}</td>
+        <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
+        <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
+        <td class="cell-ratios ${momF.cls}">${momF.text}</td>
+        <td class="cell-waste ${wCls}">${g.wasteCost > 0 ? fmtCur(g.wasteCost) : '—'}</td>
+        <td class="cell-waste ${wCls}">${g.wastePct != null ? (g.wastePct * 100).toFixed(2) + '%' : '—'}</td>
+        <td class="cell-waste">${g.wasteQty > 0 ? fmtNum(g.wasteQty) : '—'}</td>
+      </tr>`;
+    });
+
+    const stLfl = fmtSignedPct(tot.net2025 > 0 ? tot.net2026 / tot.net2025 : NaN);
+    const stTgt = fmtSignedPct(tot.target   > 0 ? tot.net2026 / tot.target   : NaN);
+    const stMom = fmtSignedPct(tot.netPrev  > 0 ? tot.net2026 / tot.netPrev  : NaN);
+    const stPct = tot.net2026 > 0 ? tot.wasteCost / tot.net2026 : null;
+    const stCls = (tot.net2025 > 0 || tot.net2026 > 0) ? (tot.net2026 >= tot.net2025 ? 'cell-positive' : 'cell-negative') : '';
+    const stAt25 = tot.orders2025 > 0 ? tot.net2025 / tot.orders2025 : 0;
+    const stAtP  = tot.ordersPrev > 0 ? tot.netPrev  / tot.ordersPrev  : 0;
+    const stAt26 = tot.orders2026 > 0 ? tot.net2026 / tot.orders2026 : 0;
+
+    const sDN25 = faAds && tot.days2025 > 0 ? tot.net2025 / tot.days2025 : tot.net2025;
+    const sDN26 = faAds && tot.days2026 > 0 ? tot.net2026 / tot.days2026 : tot.net2026;
+    const sDNp  = faAds && tot.daysPrev > 0 ? tot.netPrev / tot.daysPrev : tot.netPrev;
+    const sDO25 = faAds && tot.days2025 > 0 ? tot.orders2025 / tot.days2025 : tot.orders2025;
+    const sDO26 = faAds && tot.days2026 > 0 ? tot.orders2026 / tot.days2026 : tot.orders2026;
+    const sDOp  = faAds && tot.daysPrev > 0 ? tot.ordersPrev / tot.daysPrev : tot.ordersPrev;
+
+    if (sorted.length) {
+      html += `<tr class="subtotal-row">
+        <td class="left-cell">TOTAL</td>
+        <td class="left-cell">${sorted.length} groups</td>
+        <td class="cell-2025">${tot.days2025}</td>
+        <td class="cell-2025">${fmtCur(sDN25)}</td>
+        <td class="cell-2025">${fmtNum(sDO25)}</td>
+        <td class="cell-2025">${fmtAT(stAt25)}</td>
+        <td class="cell-prev">${tot.daysPrev}</td>
+        <td class="cell-prev">${fmtCur(sDNp)}</td>
+        <td class="cell-prev">${fmtNum(sDOp)}</td>
+        <td class="cell-prev">${fmtAT(stAtP)}</td>
+        <td class="cell-2026 ${stCls}">${tot.days2026}</td>
+        <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
+        <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
+        <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
+        <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
+        <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
+        <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+        <td class="cell-waste">${tot.wasteCost > 0 ? fmtCur(tot.wasteCost) : '—'}</td>
+        <td class="cell-waste">${tot.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
+        <td class="cell-waste">${tot.wasteQty > 0 ? fmtNum(tot.wasteQty) : '—'}</td>
+      </tr>`;
+    }
+    if (!sorted.length) html = `<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>`;
+
+    $('formatAmBody').innerHTML = html;
+
+    $('formatAmBody').querySelectorAll('tr.store-clickable').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const key = tr.dataset.faKey;
+        if (faGroupMode === 'format') {
+          FilterState.format.selected = new Set([key]);
+        } else if (faGroupMode === 'am') {
+          FilterState.area.selected = new Set([key]);
+          rebuildStoreOptionsFromManagers();
+        } else {
+          const parts = key.split('||');
+          FilterState.format.selected = new Set([parts[0]]);
+          FilterState.area.selected   = new Set([parts[1]]);
+          rebuildStoreOptionsFromManagers();
+        }
+        ['format','area','store'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+        applyFiltersAndRender();
+        switchTab('table');
+        showToast('Drilled into Detailed view', 'info');
+      });
+    });
+  }
+
+  // Wire up the toggles / sort / exports for Format-AM
+  document.addEventListener('DOMContentLoaded', () => {
+    const setGroupMode = mode => {
+      faGroupMode = mode;
+      ['faGroupFormat','faGroupAm','faGroupBoth'].forEach(b => { const el = $(b); if (el) el.classList.remove('active'); });
+      const map = { format: 'faGroupFormat', am: 'faGroupAm', both: 'faGroupBoth' };
+      const btn = $(map[mode]); if (btn) btn.classList.add('active');
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    };
+    const b1 = $('faGroupFormat'); if (b1) b1.addEventListener('click', () => setGroupMode('format'));
+    const b2 = $('faGroupAm');     if (b2) b2.addEventListener('click', () => setGroupMode('am'));
+    const b3 = $('faGroupBoth');   if (b3) b3.addEventListener('click', () => setGroupMode('both'));
+
+    const lflBtn = $('faLflToggle');
+    if (lflBtn) lflBtn.addEventListener('click', () => {
+      faLfl = !faLfl; lflBtn.classList.toggle('active', faLfl);
+      if (faLfl && faNew) { faNew = false; const nb = $('faNewStoreToggle'); if (nb) nb.classList.remove('active'); }
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    });
+    const newBtn = $('faNewStoreToggle');
+    if (newBtn) newBtn.addEventListener('click', () => {
+      faNew = !faNew; newBtn.classList.toggle('active', faNew);
+      if (faNew && faLfl) { faLfl = false; const lb = $('faLflToggle'); if (lb) lb.classList.remove('active'); }
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    });
+    const adsBtn = $('faAdsToggle');
+    if (adsBtn) adsBtn.addEventListener('click', () => {
+      faAds = !faAds; adsBtn.classList.toggle('active', faAds);
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    });
+
+    document.querySelectorAll('th[data-fasort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.fasort;
+        if (faSort.key === key) faSort.dir = faSort.dir === 'asc' ? 'desc' : 'asc';
+        else { faSort.key = key; faSort.dir = 'desc'; }
+        document.querySelectorAll('th[data-fasort]').forEach(h => h.classList.remove('sort-asc','sort-desc'));
+        th.classList.add(faSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+        if (window.__filteredData) renderFormatAm(window.__filteredData);
+      });
+    });
+
+    const expX = $('faExportExcel');
+    if (expX) expX.addEventListener('click', () => {
+      const t = document.getElementById('formatAmTable');
+      if (!t) return;
+      const aoa = [];
+      t.querySelectorAll('thead tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('th').forEach(th => {
+          const cs = parseInt(th.getAttribute('colspan') || 1);
+          row.push(th.innerText.trim());
+          for (let i = 1; i < cs; i++) row.push('');
+        });
+        aoa.push(row);
+      });
+      t.querySelectorAll('tbody tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('td').forEach(td => {
+          const x = td.innerText.trim().replace(/,/g, '');
+          row.push(x === '—' ? '' : x);
+        });
+        aoa.push(row);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Format-AM');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `Format_AM_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('Format/AM Excel exported', 'success');
+    });
+
+    const expP = $('faExportPdf');
+    if (expP) expP.addEventListener('click', () => {
+      const t = document.getElementById('formatAmTable');
+      if (!t) { showToast('No data', 'error'); return; }
+      const clone = t.cloneNode(true);
+      clone.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+      const now = new Date();
+      const printHTML = `<!doctype html><html><head><meta charset="utf-8">
+      <style>
+        @page{size:A4 landscape;margin:8mm}
+        *{box-sizing:border-box}
+        body{font-family:'Inter',system-ui,sans-serif;color:#0b1b33;background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        h1{font-size:16px;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #3b82f6}
+        table{width:100%;border-collapse:collapse;font-size:8px}
+        th,td{padding:3px 4px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap}
+        th:first-child,td:first-child{text-align:left}
+        thead th{background:#f8fafc;font-size:7px;text-transform:uppercase}
+        th.group-2025{background:#eff6ff;color:#1d4ed8}
+        th.group-prev{background:#fef9ee;color:#b45309}
+        th.group-2026{background:#f0fdf4;color:#15803d}
+        th.group-ratios{background:#faf5ff;color:#7e22ce}
+        th.group-waste{background:#fef2f2;color:#b91c1c}
+        tr.subtotal-row td{background:#e8f0fe!important;font-weight:800!important;border-top:1px solid #3b82f6!important}
+        .cell-positive{color:#15803d}.cell-negative{color:#b91c1c}
+        tr{page-break-inside:avoid}thead{display:table-header-group}
+        .toolbar{position:fixed;top:10px;right:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer}
+        @media print{.toolbar{display:none}}
+      </style></head><body>
+      <button class="toolbar" onclick="window.print()">Save as PDF</button>
+      <h1>Format / AM Report · ${now.toLocaleString()}</h1>
+      ${clone.outerHTML}
+      </body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) { showToast('Popup blocked', 'error'); return; }
+      w.document.open(); w.document.write(printHTML); w.document.close();
+      showToast('PDF preview opened', 'success');
+    });
+
+    if (window.__filteredData && window.__filteredData.length) {
+      const panel = $('formatAmPanel'); if (panel) panel.style.display = 'block';
+      renderFormatAm(window.__filteredData);
+    }
   });
 })(); // <--- THIS closes the main dashboard function
 

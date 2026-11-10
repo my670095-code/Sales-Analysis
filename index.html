@@ -1553,7 +1553,6 @@ function getMaxDayForMonth(targetYear, targetMonth) {
   if (v == null || v === '') return null;
   if (v instanceof Date && !isNaN(v)) return v;
 
-  // Numeric Excel serial (e.g., 46037)
   if (typeof v === 'number') {
     const d = new Date(Math.round((v - 25569) * 86400 * 1000));
     return isNaN(d) ? null : d;
@@ -1563,23 +1562,41 @@ function getMaxDayForMonth(targetYear, targetMonth) {
     const s = v.trim();
     if (!s) return null;
 
-    // yyyy-mm-dd (with or without time)
-    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    // yyyy-mm-dd
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
 
-    // m/d/yyyy
-    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (m) return new Date(parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]));
+    // m/d/yyyy  or  m/d/yy
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) {
+      let y = parseInt(m[3]);
+      if (y < 100) y = 2000 + y;
+      return new Date(y, parseInt(m[1]) - 1, parseInt(m[2]));
+    }
 
-    // m/d/yy  ← THIS is the fix
-    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
-    if (m) return new Date(2000 + parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]));
+    // dd-MMM-yyyy  (e.g. 15-Jan-2025)
+    m = s.match(/^(\d{1,2})[-\s]([A-Za-z]{3,})[-\s](\d{2,4})/);
+    if (m) {
+      const mon = MONTHS.findIndex(x => x.toLowerCase() === m[2].slice(0, 3).toLowerCase());
+      let y = parseInt(m[3]);
+      if (y < 100) y = 2000 + y;
+      if (mon >= 0) return new Date(y, mon, parseInt(m[1]));
+    }
 
-    // ISO fallback
+    // MMM d, yyyy  (e.g. Jan 15, 2025)
+    m = s.match(/^([A-Za-z]{3,})\s+(\d{1,2}),?\s+(\d{2,4})/);
+    if (m) {
+      const mon = MONTHS.findIndex(x => x.toLowerCase() === m[1].slice(0, 3).toLowerCase());
+      let y = parseInt(m[3]);
+      if (y < 100) y = 2000 + y;
+      if (mon >= 0) return new Date(y, mon, parseInt(m[2]));
+    }
+
+    // ISO / native fallback
     const d = new Date(s);
     if (!isNaN(d)) return d;
 
-    // numeric string fallback (Excel serial as string)
+    // numeric-string Excel serial
     const n = Number(s);
     if (isFinite(n) && n > 20000 && n < 80000) {
       const serial = new Date(Math.round((n - 25569) * 86400 * 1000));
@@ -1652,7 +1669,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
 
   function processWorkbook(buffer, name, meta) {
     try {
-      const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: true });
+      const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false, raw: true });
       const sheetName = wb.SheetNames.includes('Sheet1') ? 'Sheet1' : wb.SheetNames[0];
       const sheet = wb.Sheets[sheetName];
       if (!sheet) throw new Error('No sheet found');
@@ -1667,14 +1684,21 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       let cStore = findCol(['str_name','str name','store name','store','branch','shop']);
       let cCode = lower.findIndex(h => h === 'code' || h === 'store code' || h === 'str code' || h === 'storecode');
       let cDate = findCol(['dob','date','day']);
-      let cOrders = findCol(['orders','order','qty','quantity','customer','cc','transactions']);
+   let cOrders = lower.findIndex(h =>
+  h === 'orders' || h === 'order' || h === 'cc' || h === 'customers' ||
+  h === 'transactions' || h === 'transaction count' || h === 'qty' ||
+  h === 'quantity' || h.includes('order count') || h.includes('trans count')
+);
       let cGross = findCol(['gross amount','gross']);
       let cNet = findCol(['net amount','net sales','net']);
       let cTax = lower.findIndex(h => h.includes('incl') && h.includes('tax'));
       if (cTax < 0) cTax = lower.findIndex(h => h === 'tax' || h.includes('tax amount'));
       let cAmt = lower.findIndex(h => h.includes('amount') && !h.includes('gross') && !h.includes('net') && !h.includes('tax'));
       let cTarget = lower.findIndex(h => h === 'target' || h.includes('target') || h === 'budget' || h.includes('plan'));
-         let cArea = findCol(['area manager','manager','area','am']);
+         let cArea = lower.findIndex(h =>
+  h === 'area manager' || h === 'manager' || h === 'area' || h === 'am' ||
+  h === 'am name' || h === 'area manager name' || h === 'account manager'
+);
       let cSegment = findCol(['segment']);
       let cFormat = findCol(['format']);
 
@@ -1736,7 +1760,8 @@ const FORMAT_BY_CODE = {
           const tv = row[cTarget];
           if (tv != null && String(tv).trim() !== '' && !isFormula(tv)) { const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0; if (n > 0) target = n; }
         }
-      const area = cArea >= 0 ? cleanText(row[cArea], 'Unknown') : 'Unknown';
+    let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
+if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
       const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
       const segment = segRaw || SEGMENT_BY_CODE[code] || 'UNMAPPED';
       const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
@@ -1753,12 +1778,17 @@ const FORMAT_BY_CODE = {
       }
 
       if (!rows.length) throw new Error('No valid rows');
-      const clean = rows.filter(r => { const l = String(r.area).toLowerCase(); return l !== 'unknown' && l !== 'closed'; });
-      rawData = clean;
-      window.__rawData = clean; window.__skippedRows = skipped;
-      const nStores = new Set(clean.map(r => r.storeCode)).size;
-      rowCountBadge.textContent = `${nStores} stores • ${clean.length} rows`;
-      loadingState.style.display = 'none';
+      console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
+     const clean = rows.filter(r => {
+  const l = String(r.area || '').toLowerCase().trim();
+  return l !== 'closed';
+});
+     rawData = clean;
+window.__rawData = clean; window.__skippedRows = skipped;
+const nStores = new Set(clean.map(r => r.storeCode)).size;
+rowCountBadge.textContent = `${nStores} stores • ${clean.length} rows`;
+loadingState.style.display = 'none';
+emptyState.style.display = 'none';   // ← ADD THIS
 
       populateFilters(clean);
       filterBar.classList.add('show');

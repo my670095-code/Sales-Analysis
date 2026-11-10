@@ -515,7 +515,7 @@
   </div>
 
 
- <!-- FILTER BAR -->
+<!-- FILTER BAR -->
   <div class="filter-bar" id="filterBar">
     <div class="filter-chips-scroll">
       <div class="filter-chip-wrap">
@@ -559,6 +559,14 @@
         </div>
       </div>
       <div class="filter-chip-wrap">
+        <div class="filter-chip" data-chip="format"><i class="fas fa-building lead"></i><span>Format</span><span class="chip-value" data-value="format">All</span><i class="fas fa-chevron-down caret"></i></div>
+        <div class="filter-dropdown" data-dropdown="format">
+          <div class="fd-search"><i class="fas fa-search"></i><input type="text" placeholder="Search..." data-search></div>
+          <div class="fd-actions"><button type="button" data-all>Select All</button><button type="button" data-none>Clear</button></div>
+          <div class="fd-options" data-options></div>
+        </div>
+      </div>
+      <div class="filter-chip-wrap">
         <div class="filter-chip" data-chip="dow"><i class="fas fa-calendar-week lead"></i><span>Day</span><span class="chip-value" data-value="dow">All</span><i class="fas fa-chevron-down caret"></i></div>
         <div class="filter-dropdown" data-dropdown="dow">
           <div class="fd-search"><i class="fas fa-search"></i><input type="text" placeholder="Search..." data-search></div>
@@ -585,7 +593,6 @@
       <button class="btn btn-outline" id="resetFilters"><i class="fas fa-undo"></i> Reset</button>
     </div>
   </div>
-
   <!-- KPI PANEL -->
   <div class="kpi-grid" id="kpiPanel" style="display:none;">
     <div class="kpi-card">
@@ -850,7 +857,7 @@
         <table id="dataTable">
           <thead>
             <tr>
-              <th colspan="5" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+              <th colspan="6" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
               <th colspan="4" class="group-2025" id="groupHeader2025">2025</th>
               <th colspan="4" class="group-prev" id="groupHeaderPrev">Prev Month</th>
               <th colspan="4" class="group-2026" id="groupHeader2026">2026</th>
@@ -860,7 +867,8 @@
             <tr>
                        <th class="left-cell col-store" data-sort="store">Store</th>
               <th class="left-cell col-manager" data-sort="manager">Manager</th>
-              <th class="left-cell col-manager" data-sort="segment">Segment</th>
+                           <th class="left-cell col-manager" data-sort="segment">Segment</th>
+              <th class="left-cell col-manager" data-sort="format">Format</th>
               <th data-sort="month">Mo</th>
               <th data-sort="target">Target</th>
               <th class="group-2025" data-sort="days2025">Days</th>
@@ -1201,7 +1209,8 @@ $('saveCurrentView').addEventListener('click', () => {
      area: [...FilterState.area.selected],
     store: [...FilterState.store.selected],
     dow: [...FilterState.dow.selected],
-    segment: [...FilterState.segment.selected],
+     segment: [...FilterState.segment.selected],
+    format: [...FilterState.format.selected],
     dayFrom: $('dayFrom').value, dayTo: $('dayTo').value
   });
   localStorage.setItem('savedViews', JSON.stringify(savedViews));
@@ -1216,10 +1225,11 @@ function loadView(v) {
   rebuildStoreOptionsFromManagers();
   FilterState.store.selected = new Set(v.store);
   FilterState.dow.selected = new Set(v.dow || FilterState.dow.options.map(o => o.value));
-  if (v.segment) FilterState.segment.selected = new Set(v.segment);
+   if (v.segment) FilterState.segment.selected = new Set(v.segment);
+  if (v.format) FilterState.format.selected = new Set(v.format);
   $('dayFrom').value = v.dayFrom;
   $('dayTo').value = v.dayTo;
-  ['year','month','area','store','dow','segment'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+  ['year','month','area','store','dow','segment','format'].forEach(k => { renderOptions(k); updateChipLabel(k); });
   if (window.applyFiltersAndRender) window.applyFiltersAndRender();
   showToast(`Loaded: ${v.name}`, 'success');
 }
@@ -1257,8 +1267,8 @@ const IDB = (function() {
 })();
 
 // ===== FILTER STATE =====
-  const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() }, dow: { options: [], selected: new Set() }, category: { options: [], selected: new Set() }, segment: { options: [], selected: new Set() } };
-let masterAllOptions = { year: [], month: [], store: [], area: [], dow: [], category: [], segment: [] };
+   const FilterState = { year: { options: [], selected: new Set() }, month: { options: [], selected: new Set() }, store: { options: [], selected: new Set() }, area: { options: [], selected: new Set() }, dow: { options: [], selected: new Set() }, category: { options: [], selected: new Set() }, segment: { options: [], selected: new Set() }, format: { options: [], selected: new Set() } };
+let masterAllOptions = { year: [], month: [], store: [], area: [], dow: [], category: [], segment: [], format: [] };
 function computeAvailableStoreOptions() {
   const selAreas = FilterState.area.selected;
   const totalAreas = masterAllOptions.area.length;
@@ -1551,8 +1561,9 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       if (cTax < 0) cTax = lower.findIndex(h => h === 'tax' || h.includes('tax amount'));
       let cAmt = lower.findIndex(h => h.includes('amount') && !h.includes('gross') && !h.includes('net') && !h.includes('tax'));
       let cTarget = lower.findIndex(h => h === 'target' || h.includes('target') || h === 'budget' || h.includes('plan'));
-      let cArea = findCol(['area manager','manager','area','am']);
+         let cArea = findCol(['area manager','manager','area','am']);
       let cSegment = findCol(['segment']);
+      let cFormat = findCol(['format']);
 
 // Fallback lookup table (your list) — used if the file lacks a Segment column
 const SEGMENT_BY_CODE = {
@@ -1576,7 +1587,26 @@ const SEGMENT_BY_CODE = {
   '282':'HYBRID'
 };
 
-      if (cStore < 0) cStore = 0; if (cDate < 0) cDate = 1; if (cOrders < 0) cOrders = 2;
+const FORMAT_BY_CODE = {
+  '112':'CORPORATE & OFFICES','156':'CORPORATE & OFFICES','246':'CORPORATE & OFFICES','247':'CORPORATE & OFFICES','266':'CORPORATE & OFFICES',
+  '242':'UNIVERSITIES - BOYS','72':'UNIVERSITIES - GIRLS','294':'UNIVERSITIES - GIRLS',
+  '281':'NEIGHBOURHOOD','31':'DRIVE THRU','101':'DRIVE THRU','128':'DRIVE THRU','136':'DRIVE THRU','142':'DRIVE THRU',
+  '159':'DRIVE THRU','219':'DRIVE THRU','291':'DRIVE THRU','286':'DRIVE THRU','47':'NEIGHBOURHOOD',
+  '91':'HOSPITAL','229':'HOSPITAL','231':'HOSPITAL','234':'HOSPITAL','278':'HOSPITAL','284':'HOSPITAL',
+  '295':'HOSPITAL','308':'HOSPITAL','312':'HOSPITAL','233':'HOSPITAL','309':'PLANNED',
+  '217':'NEIGHBOURHOOD','270':'NEIGHBOURHOOD','296':'NEIGHBOURHOOD','293':'NEIGHBOURHOOD','263':'DRIVE THRU','280':'AIRPORT',
+  '74':'HOSPITAL','32':'NEIGHBOURHOOD','45':'NEIGHBOURHOOD','204':'NEIGHBOURHOOD',
+  '46':'DRIVE THRU','176':'DRIVE THRU','285':'DRIVE THRU','214':'NEIGHBOURHOOD','273':'NEIGHBOURHOOD',
+  '221':'DRIVE THRU','236':'DRIVE THRU','257':'NEIGHBOURHOOD',
+  '122':'CORPORATE & OFFICES','218':'HOSPITAL','194':'CORPORATE CATERING','200':'NEIGHBOURHOOD','287':'NEIGHBOURHOOD',
+  '302':'NEIGHBOURHOOD','303':'NEIGHBOURHOOD',
+  '306':'NEIGHBOURHOOD','307':'NEIGHBOURHOOD','117':'DRIVE THRU','121':'DRIVE THRU','160':'DRIVE THRU','288':'DRIVE THRU',
+  '245':'MALLS','222':'NEIGHBOURHOOD','240':'NEIGHBOURHOOD','265':'NEIGHBOURHOOD',
+  '304':'NEIGHBOURHOOD','305':'NEIGHBOURHOOD','145':'DRIVE THRU','161':'DRIVE THRU','213':'DRIVE THRU',
+  '251':'CORPORATE & OFFICES','282':'CORPORATE & OFFICES','110':'NEIGHBOURHOOD'
+};
+
+    if (cStore < 0) cStore = 0; if (cDate < 0) cDate = 1; if (cOrders < 0) cOrders = 2;
       if (cAmt < 0) cAmt = 3; if (cGross < 0) cGross = 4; if (cArea < 0) cArea = -1;
 
       const rows = []; let skipped = 0;
@@ -1596,6 +1626,8 @@ const SEGMENT_BY_CODE = {
       const area = cArea >= 0 ? cleanText(row[cArea], 'Unknown') : 'Unknown';
       const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
       const segment = segRaw || SEGMENT_BY_CODE[code] || 'UNMAPPED';
+      const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
+      const format = fmtRaw || FORMAT_BY_CODE[code] || 'UNMAPPED';
       const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
@@ -1604,7 +1636,7 @@ const SEGMENT_BY_CODE = {
         else if (explicitNet !== null) net = explicitNet;
         else if (amt !== null) net = amt;
         else net = gross;
-        rows.push({ store, storeCode: code, dob, dobStr: toYMD(dob), year: dob ? dob.getFullYear() : null, month: dob ? dob.getMonth() + 1 : null, day: dob ? dob.getDate() : null, monthLabel: dob ? MONTHS[dob.getMonth()] : '', orders, amount: net, gross, net, target, area, segment });
+        rows.push({ store, storeCode: code, dob, dobStr: toYMD(dob), year: dob ? dob.getFullYear() : null, month: dob ? dob.getMonth() + 1 : null, day: dob ? dob.getDate() : null, monthLabel: dob ? MONTHS[dob.getMonth()] : '', orders, amount: net, gross, net, target, area, segment, format });
       }
 
       if (!rows.length) throw new Error('No valid rows');
@@ -1729,6 +1761,12 @@ const SEGMENT_BY_CODE = {
     FilterState.segment.options = masterAllOptions.segment;
     FilterState.segment.selected = new Set(masterAllOptions.segment.map(o => o.value));
 
+    const fmtSet = new Set();
+    data.forEach(r => { if (r.format) fmtSet.add(r.format); });
+    masterAllOptions.format = [...fmtSet].sort().map(s => ({ value: s, label: s }));
+    FilterState.format.options = masterAllOptions.format;
+    FilterState.format.selected = new Set(masterAllOptions.format.map(o => o.value));
+
     FilterState.year.options = masterAllOptions.year; FilterState.year.selected = new Set(masterAllOptions.year.map(o => o.value));
     FilterState.month.options = masterAllOptions.month; FilterState.month.selected = new Set(masterAllOptions.month.map(o => o.value));
     FilterState.area.options = masterAllOptions.area.slice(); FilterState.area.selected = new Set(masterAllOptions.area.map(o => o.value));
@@ -1742,7 +1780,7 @@ const SEGMENT_BY_CODE = {
     FilterState.dow.selected = new Set(FilterState.dow.options.map(o => o.value));
     masterAllOptions.dow = FilterState.dow.options.slice();
 
-     ['year','month','area','store','dow','segment'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+     ['year','month','area','store','dow','segment','format'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     
     // Set initial day range based on the latest month present
     if (months.length > 0) {
@@ -1814,12 +1852,14 @@ const SEGMENT_BY_CODE = {
      const selY = [...FilterState.year.selected].map(Number), selM = [...FilterState.month.selected].map(Number);
     const selS = [...FilterState.store.selected], selA = [...FilterState.area.selected];
         const selDow = [...FilterState.dow.selected].map(Number);
-    const selSeg = [...FilterState.segment.selected];
+       const selSeg = [...FilterState.segment.selected];
+    const selFmt = [...FilterState.format.selected];
     const totDow = FilterState.dow.options.length;
     const dowActive = selDow.length > 0 && selDow.length !== totDow;
     const totY = FilterState.year.options.length, totM = FilterState.month.options.length;
     const totS = FilterState.store.options.length, totA = FilterState.area.options.length;
-    const totSeg = FilterState.segment.options.length;
+       const totSeg = FilterState.segment.options.length;
+    const totFmt = FilterState.format.options.length;
     const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
 
         filteredData = rawData.filter(r => {
@@ -1828,7 +1868,8 @@ const SEGMENT_BY_CODE = {
       if (selM.length && selM.length !== totM && !selM.includes(r.month)) return false;
       if (selS.length && selS.length !== totS && !selS.includes(r.storeCode)) return false;
       if (selA.length && selA.length !== totA && !selA.includes(r.area)) return false;
-      if (selSeg.length && selSeg.length !== totSeg && !selSeg.includes(r.segment)) return false;
+           if (selSeg.length && selSeg.length !== totSeg && !selSeg.includes(r.segment)) return false;
+      if (selFmt.length && selFmt.length !== totFmt && !selFmt.includes(r.format)) return false;
       if (dF != null && r.day != null && r.day < dF) return false;
       if (dT != null && r.day != null && r.day > dT) return false;
             if (dowActive && r.dob && !selDow.includes(r.dob.getDay())) return false;
@@ -1864,9 +1905,11 @@ const SEGMENT_BY_CODE = {
       FilterState.store.options = uS; FilterState.store.selected = new Set(uS.map(o => o.value));
      FilterState.dow.options = masterAllOptions.dow.slice();
     FilterState.dow.selected = new Set(masterAllOptions.dow.map(o => o.value));
-    FilterState.segment.options = masterAllOptions.segment.slice();
+      FilterState.segment.options = masterAllOptions.segment.slice();
     FilterState.segment.selected = new Set(masterAllOptions.segment.map(o => o.value));
-    ['year','month','area','store','dow','segment'].forEach(k => { renderOptions(k); updateChipLabel(k); });
+    FilterState.format.options = masterAllOptions.format.slice();
+    FilterState.format.selected = new Set(masterAllOptions.format.map(o => o.value));
+    ['year','month','area','store','dow','segment','format'].forEach(k => { renderOptions(k); updateChipLabel(k); });
     
     lflOnly = false; $('lflToggle').classList.remove('active');
     newStoreOnly = false; $('newStoreToggle').classList.remove('active'); // <-- ADD THIS LINE
@@ -2838,6 +2881,7 @@ function renderTable(data) {
       storeCode: r.storeCode,
       area: r.area,
       segment: r.segment,
+      format: r.format,
       month: r.month,
       monthLabel: r.monthLabel,
       target: 0,
@@ -2893,7 +2937,8 @@ function renderTable(data) {
       switch (currentSort.key) {
         case 'store': va = a.store; vb = b.store; break;
              case 'manager': va = a.area; vb = b.area; break;
-        case 'segment': va = a.segment; vb = b.segment; break;
+          case 'segment': va = a.segment; vb = b.segment; break;
+        case 'format': va = a.format; vb = b.format; break;
         case 'month': va = a.month; vb = b.month; break;
         case 'target': va = a.target; vb = b.target; break;
         case 'net2025': va = a.net2025; vb = b.net2025; break;
@@ -2961,7 +3006,8 @@ if (wLookup) {
     html += `<tr class="${rowCls}" data-store-code="${escapeAttr(g.storeCode)}" data-store-area="${escapeAttr(g.area)}">
           <td class="left-cell col-store"><strong>${rankHtml}${escapeHtml(sName)}</strong></td>
       <td class="left-cell col-manager">${escapeHtml(g.area)}</td>
-      <td class="left-cell col-manager">${escapeHtml(g.segment || '—')}</td>
+            <td class="left-cell col-manager">${escapeHtml(g.segment || '—')}</td>
+      <td class="left-cell col-manager">${escapeHtml(g.format || '—')}</td>
       <td>${g.monthLabel || '—'}</td>
       <td>${g.target > 0 ? fmtCur(dT) : '—'}</td>
       <td class="cell-2025">${g.days2025 || 0}</td>
@@ -3003,7 +3049,7 @@ if (wLookup) {
     if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
     const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
      html += `<tr class="subtotal-row">
-      <td colspan="5" class="left-cell">Subtotal (${rows.length} rows)</td>
+      <td colspan="6" class="left-cell">Subtotal (${rows.length} rows)</td>
       <td class="cell-2025">${Math.round(avg25)}</td>
       <td class="cell-2025">${fmtCur(sDN25)}</td>
       <td class="cell-2025">${fmtNum(sDO25)}</td>
@@ -3024,7 +3070,7 @@ if (wLookup) {
    <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
  </tr>`;
   }
-  if (!rows.length) html = '<tr><td colspan="23" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
+  if (!rows.length) html = '<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
   $('tableBody').innerHTML = html;
   $('tableBody').querySelectorAll('tr.store-clickable').forEach(tr => {
     // Use window.openStoreDayModal so it always calls the override function
@@ -3222,7 +3268,7 @@ ${clone.outerHTML}
     
     // Auto-size columns for readability
     ws['!cols'] = [
-      {wch:24},{wch:14},{wch:14},{wch:6},{wch:11},
+      {wch:24},{wch:14},{wch:14},{wch:14},{wch:6},{wch:11},
       {wch:9},{wch:13},{wch:9},{wch:8},
       {wch:15},{wch:15},{wch:11},{wch:10},
       {wch:9},{wch:13},{wch:9},{wch:8},
@@ -3393,7 +3439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sName.startsWith(storeCode)) sName = `${storeCode} - ${sName}`;
     
     document.getElementById('modalStoreName').textContent = sName;
-    document.getElementById('modalStoreSub').textContent = `Manager: ${area} • Segment: ${sample.segment || '—'} • Day-wise breakdown`;
+    document.getElementById('modalStoreSub').textContent = `Manager: ${area} • Segment: ${sample.segment || '—'} • Format: ${sample.format || '—'} • Day-wise breakdown`;
 
     window.__modalDow = window.__modalDow || new Set();
     const modalDowSet = window.__modalDow;

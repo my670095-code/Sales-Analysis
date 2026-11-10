@@ -1536,7 +1536,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
     let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
-  let faLfl = false, faNew = false, faAds = false, faSort = { key: null, dir: 'desc' };
+  
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
   const filterBar = $('filterBar'), kpiPanel = $('kpiPanel'), chartsPanel = $('chartsPanel'), tablePanel = $('tablePanel');
@@ -3498,7 +3498,7 @@ ${clone.outerHTML}
     showToast(`📊 ${raw.length} rows · ${stores} stores · ${managers} managers · ${missing} missing targets · ${skipped} skipped`, 'info');
   });
    // ===== FORMAT / AM VIEW (STACKED) =====
-let faLfl = false, faNew = false, faAds = false, faSort = { key: null, dir: 'desc' };
+
 
   function buildFormatAmTable(data, groupBy, tbodyId) {
     if (!data || !data.length) return;

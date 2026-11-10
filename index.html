@@ -1535,7 +1535,8 @@ function getMaxDayForMonth(targetYear, targetMonth) {
 (function() {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
-    let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
+  let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
+let faLfl = false, faNew = false, faAds = false;
   
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
@@ -1810,46 +1811,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       showToast('Failed: ' + err.message, 'error');
     }
   }
-      if (!rows.length) throw new Error('No valid rows');
-      console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
-     const clean = rows.filter(r => {
-  const l = String(r.area || '').toLowerCase().trim();
-  return l !== 'closed';
-});
-     rawData = clean;
-window.__rawData = clean; window.__skippedRows = skipped;
-const nStores = new Set(clean.map(r => r.storeCode)).size;
-rowCountBadge.textContent = `${nStores} stores • ${clean.length} rows`;
-loadingState.style.display = 'none';
-emptyState.style.display = 'none';   // ← ADD THIS
 
-      populateFilters(clean);
-      filterBar.classList.add('show');
-      kpiPanel.style.display = 'grid';
-      chartsPanel.style.display = 'grid';
-      tablePanel.style.display = 'block';
-      emptyState.style.display = 'none';
-            const faPanelShow = $('formatAmPanel'); if (faPanelShow) faPanelShow.style.display = 'block';
-      if ($('executiveSummary')) $('executiveSummary').style.display = 'block';
-      dayFrom.value = 1; dayTo.value = 31;
-      applyFiltersAndRender();
-
-           if (name && uploadLabel) {
-        uploadLabel.textContent = 'Loaded';
-        uploadLabel.title = name; // Shows full filename on hover
-      }
-      showToast(`Loaded ${nStores} stores`, 'success');
-      addNotif(`Uploaded ${name || 'file'} (${nStores} stores)`);
-    } catch (err) {
-      console.error(err);
-      loadingState.style.display = 'none';
-      emptyState.style.display = 'block';
-      errorBox.style.display = 'block';
-      errorText.textContent = err.message || String(err);
-      rowCountBadge.textContent = 'Error';
-      showToast('Failed: ' + err.message, 'error');
-    }
-  }
 
   fileInput.addEventListener('change', e => {
     const file = e.target.files[0]; if (!file) return;

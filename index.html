@@ -1766,7 +1766,7 @@ if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
       const segment = segRaw || SEGMENT_BY_CODE[code] || 'UNMAPPED';
       const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
       const format = fmtRaw || FORMAT_BY_CODE[code] || 'UNMAPPED';
-      const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
+           const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
         let net = 0;
@@ -1776,6 +1776,47 @@ if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
         else net = gross;
         rows.push({ store, storeCode: code, dob, dobStr: toYMD(dob), year: dob ? dob.getFullYear() : null, month: dob ? dob.getMonth() + 1 : null, day: dob ? dob.getDate() : null, monthLabel: dob ? MONTHS[dob.getMonth()] : '', orders, amount: net, gross, net, target, area, segment, format });
       }
+
+      if (!rows.length) throw new Error('No valid rows');
+      console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
+      const clean = rows.filter(r => {
+        const l = String(r.area || '').toLowerCase().trim();
+        return l !== 'closed';
+      });
+      rawData = clean;
+      window.__rawData = clean; window.__skippedRows = skipped;
+      const nStores = new Set(clean.map(r => r.storeCode)).size;
+      rowCountBadge.textContent = `${nStores} stores • ${clean.length} rows`;
+      loadingState.style.display = 'none';
+      emptyState.style.display = 'none';
+
+      populateFilters(clean);
+      filterBar.classList.add('show');
+      kpiPanel.style.display = 'grid';
+      chartsPanel.style.display = 'grid';
+      tablePanel.style.display = 'block';
+      emptyState.style.display = 'none';
+            const faPanelShow = $('formatAmPanel'); if (faPanelShow) faPanelShow.style.display = 'block';
+      if ($('executiveSummary')) $('executiveSummary').style.display = 'block';
+      dayFrom.value = 1; dayTo.value = 31;
+      applyFiltersAndRender();
+
+           if (name && uploadLabel) {
+        uploadLabel.textContent = 'Loaded';
+        uploadLabel.title = name; // Shows full filename on hover
+      }
+      showToast(`Loaded ${nStores} stores`, 'success');
+      addNotif(`Uploaded ${name || 'file'} (${nStores} stores)`);
+    } catch (err) {
+      console.error(err);
+      loadingState.style.display = 'none';
+      emptyState.style.display = 'block';
+      errorBox.style.display = 'block';
+      errorText.textContent = err.message || String(err);
+      rowCountBadge.textContent = 'Error';
+      showToast('Failed: ' + err.message, 'error');
+    }
+  }
 
       if (!rows.length) throw new Error('No valid rows');
       console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);

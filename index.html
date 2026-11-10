@@ -899,60 +899,115 @@
   </div>
   <!-- FORMAT / AM TAB -->
   <div class="view-section" id="tabFormatAm">
-    <div class="table-container" id="formatAmPanel" style="display:none;">
+    
+    <!-- 1. SEGMENT WISE -->
+    <div class="table-container" style="margin-bottom: 24px;">
       <div class="table-header-bar">
-        <h3><i class="fas fa-layer-group"></i> Format / AM Performance</h3>
+        <h3><i class="fas fa-layer-group" style="color:var(--primary);"></i> Segment Performance</h3>
         <div class="table-controls">
-          <div style="display:flex; background:var(--bg); border-radius:9px; padding:3px; border:1px solid var(--border-strong);">
-            <button class="toggle-btn active" id="faGroupFormat" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">By Format</button>
-            <button class="toggle-btn" id="faGroupAm" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">By AM</button>
-            <button class="toggle-btn" id="faGroupBoth" style="border:none; background:transparent; padding:6px 12px; font-size:.78rem;">Format × AM</button>
-          </div>
-          <button class="toggle-btn lfl-toggle" id="faLflToggle"><i class="fas fa-filter"></i> LFL Only</button>
-          <button class="toggle-btn" id="faNewStoreToggle" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
-          <button class="toggle-btn" id="faAdsToggle"><i class="fas fa-calculator"></i> ADS</button>
-          <button class="export-btn excel" id="faExportExcel"><i class="fas fa-file-excel"></i> Excel</button>
-          <button class="export-btn pdf" id="faExportPdf"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button class="toggle-btn lfl-toggle fa-lfl-btn"><i class="fas fa-filter"></i> LFL Only</button>
+          <button class="toggle-btn fa-new-btn" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+          <button class="toggle-btn fa-ads-btn"><i class="fas fa-calculator"></i> ADS</button>
+          <button class="export-btn excel fa-export-excel" data-table="faTableSegment"><i class="fas fa-file-excel"></i> Excel</button>
         </div>
       </div>
       <div class="table-scroll">
-        <table id="formatAmTable">
+        <table id="faTableSegment">
           <thead>
             <tr>
-              <th colspan="2" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
-              <th colspan="4" class="group-2025" id="faHdr2025">2025</th>
-              <th colspan="4" class="group-prev" id="faHdrPrev">Prev Month</th>
-              <th colspan="4" class="group-2026" id="faHdr2026">2026</th>
+              <th colspan="1" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+              <th colspan="4" class="group-2025">2025</th>
+              <th colspan="4" class="group-prev">Prev Month</th>
+              <th colspan="4" class="group-2026">2026</th>
               <th colspan="3" class="group-ratios">Ratios</th>
               <th colspan="3" class="group-waste">Wastage</th>
             </tr>
             <tr>
-              <th class="left-cell" data-fasort="format">Format</th>
-              <th class="left-cell" data-fasort="am">AM</th>
-              <th class="group-2025" data-fasort="days2025">Days</th>
-              <th class="group-2025" data-fasort="net2025">Sales</th>
-              <th class="group-2025">ADT</th>
-              <th class="group-2025">AT</th>
-              <th class="group-prev" data-fasort="prevDays">Days</th>
-              <th class="group-prev" data-fasort="prevNet">Sales</th>
-              <th class="group-prev">ADT</th>
-              <th class="group-prev">AT</th>
-              <th class="group-2026" data-fasort="days2026">Days</th>
-              <th class="group-2026" data-fasort="net2026">Sales</th>
-              <th class="group-2026">ADT</th>
-              <th class="group-2026">AT</th>
-              <th class="group-ratios" data-fasort="lfl">LFL</th>
-              <th class="group-ratios" data-fasort="tgt">Tgt</th>
-              <th class="group-ratios" data-fasort="mom">MoM</th>
-              <th class="group-waste" data-fasort="wasteCost">Waste</th>
-              <th class="group-waste" data-fasort="wastePct">Waste %</th>
-              <th class="group-waste" data-fasort="wasteQty">Waste Qty</th>
+              <th class="left-cell" style="min-width:150px;">Segment</th>
+              <th class="group-2025">Days</th><th class="group-2025">Sales</th><th class="group-2025">ADT</th><th class="group-2025">AT</th>
+              <th class="group-prev">Days</th><th class="group-prev">Sales</th><th class="group-prev">ADT</th><th class="group-prev">AT</th>
+              <th class="group-2026">Days</th><th class="group-2026">Sales</th><th class="group-2026">ADT</th><th class="group-2026">AT</th>
+              <th class="group-ratios">LFL</th><th class="group-ratios">Tgt</th><th class="group-ratios">MoM</th>
+              <th class="group-waste">Waste</th><th class="group-waste">Waste %</th><th class="group-waste">Waste Qty</th>
             </tr>
           </thead>
-          <tbody id="formatAmBody"></tbody>
+          <tbody id="faSegmentBody"></tbody>
         </table>
       </div>
     </div>
+
+    <!-- 2. FORMAT WISE -->
+    <div class="table-container" style="margin-bottom: 24px;">
+      <div class="table-header-bar">
+        <h3><i class="fas fa-building" style="color:var(--primary);"></i> Format Performance</h3>
+        <div class="table-controls">
+          <button class="toggle-btn lfl-toggle fa-lfl-btn"><i class="fas fa-filter"></i> LFL Only</button>
+          <button class="toggle-btn fa-new-btn" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+          <button class="toggle-btn fa-ads-btn"><i class="fas fa-calculator"></i> ADS</button>
+          <button class="export-btn excel fa-export-excel" data-table="faTableFormat"><i class="fas fa-file-excel"></i> Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="faTableFormat">
+          <thead>
+            <tr>
+              <th colspan="1" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+              <th colspan="4" class="group-2025">2025</th>
+              <th colspan="4" class="group-prev">Prev Month</th>
+              <th colspan="4" class="group-2026">2026</th>
+              <th colspan="3" class="group-ratios">Ratios</th>
+              <th colspan="3" class="group-waste">Wastage</th>
+            </tr>
+            <tr>
+              <th class="left-cell" style="min-width:150px;">Format</th>
+              <th class="group-2025">Days</th><th class="group-2025">Sales</th><th class="group-2025">ADT</th><th class="group-2025">AT</th>
+              <th class="group-prev">Days</th><th class="group-prev">Sales</th><th class="group-prev">ADT</th><th class="group-prev">AT</th>
+              <th class="group-2026">Days</th><th class="group-2026">Sales</th><th class="group-2026">ADT</th><th class="group-2026">AT</th>
+              <th class="group-ratios">LFL</th><th class="group-ratios">Tgt</th><th class="group-ratios">MoM</th>
+              <th class="group-waste">Waste</th><th class="group-waste">Waste %</th><th class="group-waste">Waste Qty</th>
+            </tr>
+          </thead>
+          <tbody id="faFormatBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3. AM WISE -->
+    <div class="table-container" style="margin-bottom: 24px;">
+      <div class="table-header-bar">
+        <h3><i class="fas fa-user-tie" style="color:var(--primary);"></i> AM Performance</h3>
+        <div class="table-controls">
+          <button class="toggle-btn lfl-toggle fa-lfl-btn"><i class="fas fa-filter"></i> LFL Only</button>
+          <button class="toggle-btn fa-new-btn" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+          <button class="toggle-btn fa-ads-btn"><i class="fas fa-calculator"></i> ADS</button>
+          <button class="export-btn excel fa-export-excel" data-table="faTableAm"><i class="fas fa-file-excel"></i> Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="faTableAm">
+          <thead>
+            <tr>
+              <th colspan="1" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
+              <th colspan="4" class="group-2025">2025</th>
+              <th colspan="4" class="group-prev">Prev Month</th>
+              <th colspan="4" class="group-2026">2026</th>
+              <th colspan="3" class="group-ratios">Ratios</th>
+              <th colspan="3" class="group-waste">Wastage</th>
+            </tr>
+            <tr>
+              <th class="left-cell" style="min-width:150px;">AM</th>
+              <th class="group-2025">Days</th><th class="group-2025">Sales</th><th class="group-2025">ADT</th><th class="group-2025">AT</th>
+              <th class="group-prev">Days</th><th class="group-prev">Sales</th><th class="group-prev">ADT</th><th class="group-prev">AT</th>
+              <th class="group-2026">Days</th><th class="group-2026">Sales</th><th class="group-2026">ADT</th><th class="group-2026">AT</th>
+              <th class="group-ratios">LFL</th><th class="group-ratios">Tgt</th><th class="group-ratios">MoM</th>
+              <th class="group-waste">Waste</th><th class="group-waste">Waste %</th><th class="group-waste">Waste Qty</th>
+            </tr>
+          </thead>
+          <tbody id="faAmBody"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
   <div id="emptyState" class="empty-state">
     <i class="fas fa-file-excel"></i>
@@ -1480,8 +1535,8 @@ function getMaxDayForMonth(targetYear, targetMonth) {
 (function() {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
-  let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
-
+    let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
+  let faLfl = false, faNew = false, faAds = false, faSort = { key: null, dir: 'desc' };
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
   const filterBar = $('filterBar'), kpiPanel = $('kpiPanel'), chartsPanel = $('chartsPanel'), tablePanel = $('tablePanel');
@@ -1976,11 +2031,9 @@ const FORMAT_BY_CODE = {
     lflOnly = false; $('lflToggle').classList.remove('active');
     newStoreOnly = false; $('newStoreToggle').classList.remove('active');
 
-    // FIX #4: Also reset Format/AM internal toggles
-       faLfl = false; faNew = false; faAds = false; faSort = { key: null, dir: 'desc' };
-    ['faLflToggle','faNewStoreToggle','faAdsToggle'].forEach(id => {
-      const el = $(id); if (el) el.classList.remove('active');
-    });   
+     // Reset Format/AM stacked toggles
+    faLfl = false; faNew = false; faAds = false;
+    document.querySelectorAll('.fa-lfl-btn, .fa-new-btn, .fa-ads-btn').forEach(b => b.classList.remove('active'));
     currentSort = { key: null, dir: 'desc' };
     globalSearchTerm = ''; $('globalSearch').value = '';
     applyFiltersAndRender();
@@ -3444,25 +3497,20 @@ ${clone.outerHTML}
     addNotif(`Data Quality: ${raw.length} rows, ${missing} missing targets, ${skipped} skipped`);
     showToast(`📊 ${raw.length} rows · ${stores} stores · ${managers} managers · ${missing} missing targets · ${skipped} skipped`, 'info');
   });
-      // ===== FORMAT / AM VIEW =====
-  let faGroupMode = 'format';
-  let faLfl = false, faNew = false, faAds = false;
-  let faSort = { key: null, dir: 'desc' };
+   // ===== FORMAT / AM VIEW (STACKED) =====
+let faLfl = false, faNew = false, faAds = false, faSort = { key: null, dir: 'desc' };
 
-  function renderFormatAm(data) {
+  function buildFormatAmTable(data, groupBy, tbodyId) {
     if (!data || !data.length) return;
     const tm = window.__targetMaps || buildTargetMap(rawData);
     const sY = window.__salesYear;
     const ctx = getMonthContext();
 
-    const h25 = $('faHdr2025'); if (h25) h25.textContent = '2025';
-    const hp  = $('faHdrPrev'); if (hp)  hp.textContent  = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
-    const h26 = $('faHdr2026'); if (h26) h26.textContent = '2026';
-
     const keyOf = r => {
-      if (faGroupMode === 'format') return r.format || 'UNMAPPED';
-      if (faGroupMode === 'am')     return r.area   || 'Unknown';
-      return `${r.format || 'UNMAPPED'}||${r.area || 'Unknown'}`;
+      if (groupBy === 'segment') return r.segment || 'UNMAPPED';
+      if (groupBy === 'format')  return r.format  || 'UNMAPPED';
+      if (groupBy === 'am')      return r.area    || 'Unknown';
+      return 'Unknown';
     };
 
     const selM = [...FilterState.month.selected].map(Number);
@@ -3473,8 +3521,6 @@ ${clone.outerHTML}
       const k = keyOf(r);
       if (!gMap.has(k)) gMap.set(k, {
         key: k,
-        format: faGroupMode === 'am'     ? '—' : (r.format || 'UNMAPPED'),
-        am:     faGroupMode === 'format' ? '—' : (r.area   || 'Unknown'),
         target: 0,
         net2025: 0, orders2025: 0, days2025Set: new Set(),
         net2026: 0, orders2026: 0, days2026Set: new Set(),
@@ -3497,27 +3543,24 @@ ${clone.outerHTML}
       if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0 && r.day != null) g.days2025Set.add(r.day); }
       else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
     });
-    
 
-    // FIX: Previous-month aggregation from rawData, honoring all active filters including Day Range
+    // Prev Month (Honoring Day filters)
     const pS = FilterState.store.selected, tS_ = FilterState.store.options.length;
     const pA = FilterState.area.selected,  tA_ = FilterState.area.options.length;
     const dF_prev = dayFrom.value ? parseInt(dayFrom.value) : null;
     const dT_prev = dayTo.value ? parseInt(dayTo.value) : null;
-    
     rawData.forEach(r => {
       if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
       if (pS.size && pS.size !== tS_ && !pS.has(r.storeCode)) return;
       if (pA.size && pA.size !== tA_ && !pA.has(r.area)) return;
-      if (dF_prev !== null && r.day < dF_prev) return; // <-- Filters out days before start
-      if (dT_prev !== null && r.day > dT_prev) return; // <-- Filters out days after end
-      
+      if (dF_prev !== null && r.day < dF_prev) return;
+      if (dT_prev !== null && r.day > dT_prev) return;
       const g = gMap.get(keyOf(r)); if (!g) return;
       g.netPrev += r.net; g.ordersPrev += r.orders;
       if (r.net > 0) g.daysPrevSet.add(r.day);
     });
 
-    // FIX #3: O(n) wastage lookup (pre-built Map instead of data.find() per row)
+    // Wastage
     try {
       if (typeof getFilteredWastage === 'function' && typeof buildWastageIndex === 'function') {
         const wIdx = buildWastageIndex(getFilteredWastage(), data);
@@ -3551,38 +3594,12 @@ ${clone.outerHTML}
       rows = rows.filter(r => [...r.stores].every(sc => !storesWith2025.has(sc)));
     }
 
-    // Sort
-    const sorted = [...rows];
-    if (faSort.key) {
-      sorted.sort((a, b) => {
-        let va, vb;
-        switch (faSort.key) {
-          case 'format': va = a.format; vb = b.format; break;
-          case 'am': va = a.am; vb = b.am; break;
-          case 'net2025': va = a.net2025; vb = b.net2025; break;
-          case 'net2026': va = a.net2026; vb = b.net2026; break;
-          case 'days2025': va = a.days2025; vb = b.days2025; break;
-          case 'days2026': va = a.days2026; vb = b.days2026; break;
-          case 'prevNet': va = a.netPrev; vb = b.netPrev; break;
-          case 'prevDays': va = a.daysPrev; vb = b.daysPrev; break;
-          case 'lfl': va = a.lfl || 0; vb = b.lfl || 0; break;
-          case 'tgt': va = a.tgt || 0; vb = b.tgt || 0; break;
-          case 'mom': va = a.mom || 0; vb = b.mom || 0; break;
-          case 'wasteCost': va = a.wasteCost; vb = b.wasteCost; break;
-          case 'wastePct': va = a.wastePct || 0; vb = b.wastePct || 0; break;
-          case 'wasteQty': va = a.wasteQty; vb = b.wasteQty; break;
-          default: va = 0; vb = 0;
-        }
-        if (typeof va === 'string') return faSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-        return faSort.dir === 'asc' ? va - vb : vb - va;
-      });
-    } else {
-      sorted.sort((a, b) => b.net2026 - a.net2026);
-    }
+    rows.sort((a, b) => b.net2026 - a.net2026);
 
     const tot = { target:0, net2025:0, orders2025:0, days2025:0, netPrev:0, ordersPrev:0, daysPrev:0, net2026:0, orders2026:0, days2026:0, wasteCost:0, wasteQty:0 };
     let html = '';
-    sorted.forEach(g => {
+    
+    rows.forEach(g => {
       tot.target += g.target;
       tot.net2025 += g.net2025; tot.orders2025 += g.orders2025; tot.days2025 += g.days2025;
       tot.netPrev += g.netPrev; tot.ordersPrev += g.ordersPrev; tot.daysPrev += g.daysPrev;
@@ -3606,24 +3623,12 @@ ${clone.outerHTML}
       const cls = (g.net2025 > 0 || g.net2026 > 0) ? (g.net2026 >= g.net2025 ? 'cell-positive' : 'cell-negative') : '';
       const wCls = g.wastePct != null ? (g.wastePct > 0.05 ? 'cell-negative' : '') : '';
 
-      html += `<tr class="store-clickable" data-fa-key="${escapeAttr(g.key)}">
-        <td class="left-cell col-store"><strong>${escapeHtml(g.format)}</strong></td>
-        <td class="left-cell col-manager">${escapeHtml(g.am)}${g.storeCount ? `<span style="color:var(--text-light); font-size:.65rem; margin-left:6px;">(${g.storeCount})</span>` : ''}</td>
-        <td class="cell-2025">${g.days2025 || 0}</td>
-        <td class="cell-2025">${fmtCur(dN25)}</td>
-        <td class="cell-2025">${fmtNum(dO25)}</td>
-        <td class="cell-2025">${fmtAT(at25)}</td>
-        <td class="cell-prev">${g.daysPrev || 0}</td>
-        <td class="cell-prev">${fmtCur(dNp)}</td>
-        <td class="cell-prev">${fmtNum(dOp)}</td>
-        <td class="cell-prev">${fmtAT(atP)}</td>
-        <td class="cell-2026 ${cls}">${g.days2026 || 0}</td>
-        <td class="cell-2026 ${cls}">${fmtCur(dN26)}</td>
-        <td class="cell-2026 ${cls}">${fmtNum(dO26)}</td>
-        <td class="cell-2026 ${cls}">${fmtAT(at26)}</td>
-        <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
-        <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
-        <td class="cell-ratios ${momF.cls}">${momF.text}</td>
+      html += `<tr>
+        <td class="left-cell col-store"><strong>${escapeHtml(g.key)}</strong>${g.storeCount ? `<span style="color:var(--text-light); font-size:.65rem; margin-left:6px;">(${g.storeCount})</span>` : ''}</td>
+        <td class="cell-2025">${g.days2025 || 0}</td><td class="cell-2025">${fmtCur(dN25)}</td><td class="cell-2025">${fmtNum(dO25)}</td><td class="cell-2025">${fmtAT(at25)}</td>
+        <td class="cell-prev">${g.daysPrev || 0}</td><td class="cell-prev">${fmtCur(dNp)}</td><td class="cell-prev">${fmtNum(dOp)}</td><td class="cell-prev">${fmtAT(atP)}</td>
+        <td class="cell-2026 ${cls}">${g.days2026 || 0}</td><td class="cell-2026 ${cls}">${fmtCur(dN26)}</td><td class="cell-2026 ${cls}">${fmtNum(dO26)}</td><td class="cell-2026 ${cls}">${fmtAT(at26)}</td>
+        <td class="cell-ratios ${lflF.cls}">${lflF.text}</td><td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td><td class="cell-ratios ${momF.cls}">${momF.text}</td>
         <td class="cell-waste ${wCls}">${g.wasteCost > 0 ? fmtCur(g.wasteCost) : '—'}</td>
         <td class="cell-waste ${wCls}">${g.wastePct != null ? (g.wastePct * 100).toFixed(2) + '%' : '—'}</td>
         <td class="cell-waste">${g.wasteQty > 0 ? fmtNum(g.wasteQty) : '—'}</td>
@@ -3646,177 +3651,101 @@ ${clone.outerHTML}
     const sDO26 = faAds && tot.days2026 > 0 ? tot.orders2026 / tot.days2026 : tot.orders2026;
     const sDOp  = faAds && tot.daysPrev > 0 ? tot.ordersPrev / tot.daysPrev : tot.ordersPrev;
 
-    if (sorted.length) {
+    if (rows.length) {
       html += `<tr class="subtotal-row">
         <td class="left-cell">TOTAL</td>
-        <td class="left-cell">${sorted.length} groups</td>
-        <td class="cell-2025">${tot.days2025}</td>
-        <td class="cell-2025">${fmtCur(sDN25)}</td>
-        <td class="cell-2025">${fmtNum(sDO25)}</td>
-        <td class="cell-2025">${fmtAT(stAt25)}</td>
-        <td class="cell-prev">${tot.daysPrev}</td>
-        <td class="cell-prev">${fmtCur(sDNp)}</td>
-        <td class="cell-prev">${fmtNum(sDOp)}</td>
-        <td class="cell-prev">${fmtAT(stAtP)}</td>
-        <td class="cell-2026 ${stCls}">${tot.days2026}</td>
-        <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
-        <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
-        <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
-        <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
-        <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
-        <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+        <td class="cell-2025">${tot.days2025}</td><td class="cell-2025">${fmtCur(sDN25)}</td><td class="cell-2025">${fmtNum(sDO25)}</td><td class="cell-2025">${fmtAT(stAt25)}</td>
+        <td class="cell-prev">${tot.daysPrev}</td><td class="cell-prev">${fmtCur(sDNp)}</td><td class="cell-prev">${fmtNum(sDOp)}</td><td class="cell-prev">${fmtAT(stAtP)}</td>
+        <td class="cell-2026 ${stCls}">${tot.days2026}</td><td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td><td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td><td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
+        <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td><td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td><td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
         <td class="cell-waste">${tot.wasteCost > 0 ? fmtCur(tot.wasteCost) : '—'}</td>
         <td class="cell-waste">${tot.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
         <td class="cell-waste">${tot.wasteQty > 0 ? fmtNum(tot.wasteQty) : '—'}</td>
       </tr>`;
     }
-    if (!sorted.length) html = `<tr><td colspan="20" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>`;
+    
+    if (!rows.length) html = `<tr><td colspan="19" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>`;
 
-    $('formatAmBody').innerHTML = html;
-
-    $('formatAmBody').querySelectorAll('tr.store-clickable').forEach(tr => {
-      tr.addEventListener('click', () => {
-        const key = tr.dataset.faKey;
-        if (faGroupMode === 'format') {
-          FilterState.format.selected = new Set([key]);
-        } else if (faGroupMode === 'am') {
-          FilterState.area.selected = new Set([key]);
-          rebuildStoreOptionsFromManagers();
-        } else {
-          const parts = key.split('||');
-          FilterState.format.selected = new Set([parts[0]]);
-          FilterState.area.selected   = new Set([parts[1]]);
-          rebuildStoreOptionsFromManagers();
-        }
-        ['format','area','store'].forEach(k => { renderOptions(k); updateChipLabel(k); });
-        applyFiltersAndRender();
-        switchTab('table');
-        showToast('Drilled into Detailed view', 'info');
-      });
-    });
+    document.getElementById(tbodyId).innerHTML = html;
   }
 
-  // Wire up the toggles / sort / exports for Format-AM
+  function renderFormatAm(data) {
+    if (!data || !data.length) return;
+    
+    const ctx = getMonthContext();
+    document.querySelectorAll('#tabFormatAm .group-prev').forEach(el => {
+      if (el.tagName === 'TH') el.textContent = `PREV (${MONTHS[ctx.prevM-1]} ${ctx.prevY})`;
+    });
+
+    buildFormatAmTable(data, 'segment', 'faSegmentBody');
+    buildFormatAmTable(data, 'format',  'faFormatBody');
+    buildFormatAmTable(data, 'am',      'faAmBody');
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    const setGroupMode = mode => {
-      faGroupMode = mode;
-      ['faGroupFormat','faGroupAm','faGroupBoth'].forEach(b => { const el = $(b); if (el) el.classList.remove('active'); });
-      const map = { format: 'faGroupFormat', am: 'faGroupAm', both: 'faGroupBoth' };
-      const btn = $(map[mode]); if (btn) btn.classList.add('active');
-      if (window.__filteredData) renderFormatAm(window.__filteredData);
-    };
-    const b1 = $('faGroupFormat'); if (b1) b1.addEventListener('click', () => setGroupMode('format'));
-    const b2 = $('faGroupAm');     if (b2) b2.addEventListener('click', () => setGroupMode('am'));
-    const b3 = $('faGroupBoth');   if (b3) b3.addEventListener('click', () => setGroupMode('both'));
-
-    const lflBtn = $('faLflToggle');
-    if (lflBtn) lflBtn.addEventListener('click', () => {
-      faLfl = !faLfl; lflBtn.classList.toggle('active', faLfl);
-      if (faLfl && faNew) { faNew = false; const nb = $('faNewStoreToggle'); if (nb) nb.classList.remove('active'); }
-      if (window.__filteredData) renderFormatAm(window.__filteredData);
-    });
-    const newBtn = $('faNewStoreToggle');
-    if (newBtn) newBtn.addEventListener('click', () => {
-      faNew = !faNew; newBtn.classList.toggle('active', faNew);
-      if (faNew && faLfl) { faLfl = false; const lb = $('faLflToggle'); if (lb) lb.classList.remove('active'); }
-      if (window.__filteredData) renderFormatAm(window.__filteredData);
-    });
-    const adsBtn = $('faAdsToggle');
-    if (adsBtn) adsBtn.addEventListener('click', () => {
-      faAds = !faAds; adsBtn.classList.toggle('active', faAds);
-      if (window.__filteredData) renderFormatAm(window.__filteredData);
-    });
-
-    document.querySelectorAll('th[data-fasort]').forEach(th => {
-      th.addEventListener('click', () => {
-        const key = th.dataset.fasort;
-        if (faSort.key === key) faSort.dir = faSort.dir === 'asc' ? 'desc' : 'asc';
-        else { faSort.key = key; faSort.dir = 'desc'; }
-        document.querySelectorAll('th[data-fasort]').forEach(h => h.classList.remove('sort-asc','sort-desc'));
-        th.classList.add(faSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+    document.querySelectorAll('.fa-lfl-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        faLfl = !faLfl; 
+        document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.toggle('active', faLfl));
+        if (faLfl && faNew) { faNew = false; document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.remove('active')); }
         if (window.__filteredData) renderFormatAm(window.__filteredData);
       });
     });
 
-    const expX = $('faExportExcel');
-    if (expX) expX.addEventListener('click', () => {
-      const t = document.getElementById('formatAmTable');
-      if (!t) return;
-      const aoa = [];
-      t.querySelectorAll('thead tr').forEach(tr => {
-        const row = [];
-        tr.querySelectorAll('th').forEach(th => {
-          const cs = parseInt(th.getAttribute('colspan') || 1);
-          row.push(th.innerText.trim());
-          for (let i = 1; i < cs; i++) row.push('');
-        });
-        aoa.push(row);
+    document.querySelectorAll('.fa-new-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        faNew = !faNew; 
+        document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.toggle('active', faNew));
+        if (faNew && faLfl) { faLfl = false; document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.remove('active')); }
+        if (window.__filteredData) renderFormatAm(window.__filteredData);
       });
-      t.querySelectorAll('tbody tr').forEach(tr => {
-        const row = [];
-        tr.querySelectorAll('td').forEach(td => {
-          const x = td.innerText.trim().replace(/,/g, '');
-          row.push(x === '—' ? '' : x);
-        });
-        aoa.push(row);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Format-AM');
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `Format_AM_${new Date().toISOString().slice(0,10)}.xlsx`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showToast('Format/AM Excel exported', 'success');
     });
 
-    const expP = $('faExportPdf');
-    if (expP) expP.addEventListener('click', () => {
-      const t = document.getElementById('formatAmTable');
-      if (!t) { showToast('No data', 'error'); return; }
-      const clone = t.cloneNode(true);
-      clone.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
-      const now = new Date();
-      const printHTML = `<!doctype html><html><head><meta charset="utf-8">
-      <style>
-        @page{size:A4 landscape;margin:8mm}
-        *{box-sizing:border-box}
-        body{font-family:'Inter',system-ui,sans-serif;color:#0b1b33;background:#fff;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        h1{font-size:16px;margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid #3b82f6}
-        table{width:100%;border-collapse:collapse;font-size:8px}
-        th,td{padding:3px 4px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap}
-        th:first-child,td:first-child{text-align:left}
-        thead th{background:#f8fafc;font-size:7px;text-transform:uppercase}
-        th.group-2025{background:#eff6ff;color:#1d4ed8}
-        th.group-prev{background:#fef9ee;color:#b45309}
-        th.group-2026{background:#f0fdf4;color:#15803d}
-        th.group-ratios{background:#faf5ff;color:#7e22ce}
-        th.group-waste{background:#fef2f2;color:#b91c1c}
-        tr.subtotal-row td{background:#e8f0fe!important;font-weight:800!important;border-top:1px solid #3b82f6!important}
-        .cell-positive{color:#15803d}.cell-negative{color:#b91c1c}
-        tr{page-break-inside:avoid}thead{display:table-header-group}
-        .toolbar{position:fixed;top:10px;right:10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer}
-        @media print{.toolbar{display:none}}
-      </style></head><body>
-      <button class="toolbar" onclick="window.print()">Save as PDF</button>
-      <h1>Format / AM Report · ${now.toLocaleString()}</h1>
-      ${clone.outerHTML}
-      </body></html>`;
-      const w = window.open('', '_blank');
-      if (!w) { showToast('Popup blocked', 'error'); return; }
-      w.document.open(); w.document.write(printHTML); w.document.close();
-      showToast('PDF preview opened', 'success');
+    document.querySelectorAll('.fa-ads-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        faAds = !faAds; 
+        document.querySelectorAll('.fa-ads-btn').forEach(b => b.classList.toggle('active', faAds));
+        if (window.__filteredData) renderFormatAm(window.__filteredData);
+      });
     });
 
-    if (window.__filteredData && window.__filteredData.length) {
-      const panel = $('formatAmPanel'); if (panel) panel.style.display = 'block';
-      renderFormatAm(window.__filteredData);
-    }
+    document.querySelectorAll('.fa-export-excel').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tableId = btn.dataset.table;
+        const t = document.getElementById(tableId);
+        if (!t) return;
+        const aoa = [];
+        t.querySelectorAll('thead tr').forEach(tr => {
+          const row = [];
+          tr.querySelectorAll('th').forEach(th => {
+            const cs = parseInt(th.getAttribute('colspan') || 1);
+            row.push(th.innerText.trim());
+            for (let i = 1; i < cs; i++) row.push('');
+          });
+          aoa.push(row);
+        });
+        t.querySelectorAll('tbody tr').forEach(tr => {
+          const row = [];
+          tr.querySelectorAll('td').forEach(td => {
+            const x = td.innerText.trim().replace(/,/g, '');
+            row.push(x === '—' ? '' : x);
+          });
+          aoa.push(row);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Format-AM');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${tableId}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Excel exported', 'success');
+      });
+    });
   });
-})(); // <--- THIS closes the main dashboard function
 
 
 

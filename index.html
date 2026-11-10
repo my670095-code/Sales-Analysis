@@ -3499,14 +3499,19 @@ ${clone.outerHTML}
     });
     
 
-    // FIX #2: Previous-month aggregation from rawData, honoring Store/Area filters
-    // (mirrors renderTable so Prev column matches Detailed exactly)
+    // FIX: Previous-month aggregation from rawData, honoring all active filters including Day Range
     const pS = FilterState.store.selected, tS_ = FilterState.store.options.length;
     const pA = FilterState.area.selected,  tA_ = FilterState.area.options.length;
+    const dF_prev = dayFrom.value ? parseInt(dayFrom.value) : null;
+    const dT_prev = dayTo.value ? parseInt(dayTo.value) : null;
+    
     rawData.forEach(r => {
       if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
       if (pS.size && pS.size !== tS_ && !pS.has(r.storeCode)) return;
       if (pA.size && pA.size !== tA_ && !pA.has(r.area)) return;
+      if (dF_prev !== null && r.day < dF_prev) return; // <-- Filters out days before start
+      if (dT_prev !== null && r.day > dT_prev) return; // <-- Filters out days after end
+      
       const g = gMap.get(keyOf(r)); if (!g) return;
       g.netPrev += r.net; g.ordersPrev += r.orders;
       if (r.net > 0) g.daysPrevSet.add(r.day);

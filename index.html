@@ -840,10 +840,21 @@
   <!-- FORMAT / AM TAB -->
   <div class="view-section" id="tabFormatAm">
     
-    <!-- 1. SEGMENT WISE -->
+     <!-- 1. SEGMENT WISE -->
     <div class="table-container" style="margin-bottom: 24px;">
       <div class="table-header-bar">
         <h3><i class="fas fa-layer-group" style="color:var(--primary);"></i> Segment Performance</h3>
+        
+        <!-- ADD THIS TABLE-CONTROLS BLOCK HERE -->
+        <div class="table-controls">
+          <button class="toggle-btn lfl-toggle fa-lfl-btn"><i class="fas fa-filter"></i> LFL Only</button>
+          <button class="toggle-btn fa-new-btn" style="color:#8b5cf6; border-color:#8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+          <button class="toggle-btn fa-ads-btn"><i class="fas fa-calculator"></i> ADS</button>
+          <button class="export-btn excel fa-export-excel" data-table="faTableSegment"><i class="fas fa-file-excel"></i> Excel</button>
+          <button class="export-btn pdf fa-export-pdf" data-table="faTableSegment"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+        <!-- END OF TABLE-CONTROLS -->
+
       </div>
       <div class="table-scroll">
         <table id="faTableSegment">

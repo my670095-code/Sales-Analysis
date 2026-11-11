@@ -788,6 +788,7 @@
         <div class="table-controls">
         <button class="toggle-btn lfl-toggle" id="lflToggle"><i class="fas fa-filter"></i> LFL Only</button>
         <button class="toggle-btn" id="newStoreToggle" style="color: #8b5cf6; border-color: #8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
+                    <button class="toggle-btn" id="closedStoreToggle" style="color: var(--danger); border-color: var(--danger);"><i class="fas fa-store-slash"></i> Closed Stores</button>
           <button class="toggle-btn" id="adsToggle"><i class="fas fa-calculator"></i> ADS</button>
           <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
           <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
@@ -1092,6 +1093,107 @@ const $ = id => document.getElementById(id);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const WEEKEND_CLOSED = new Set(['312','251','278','247','284','214','308','231','266','194','246','156','101','294','122','72','234','242']);
+  // ===== STORE MASTER MAPPING =====
+const STORE_MAPPING = {
+  "112": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "122": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "156": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "246": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "247": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "266": { segment: "AS USUAL", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "74": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "91": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "218": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "229": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "231": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "234": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "278": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "284": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "295": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "308": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "312": { segment: "AS USUAL", format: "HOSPITAL", status: "OPERATING" },
+  "194": { segment: "AS USUAL", format: "CORPORATE CATERING", status: "OPERATING" },
+  "32": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "45": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "200": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "204": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "281": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "287": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "302": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "303": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "304": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "305": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "306": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "307": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "242": { segment: "AS USUAL", format: "UNIVERSITIES - BOYS", status: "OPERATING" },
+  "72": { segment: "AS USUAL", format: "UNIVERSITIES - GIRLS", status: "OPERATING" },
+  "294": { segment: "AS USUAL", format: "UNIVERSITIES - GIRLS", status: "OPERATING" },
+  "31": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "46": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "101": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "117": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "121": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "128": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "136": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "142": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "145": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "159": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "160": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "161": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "176": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "213": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "219": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "285": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "288": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "291": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "245": { segment: "HYBRID", format: "MALLS", status: "OPERATING" },
+  "251": { segment: "HYBRID", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "282": { segment: "HYBRID", format: "CORPORATE & OFFICES", status: "OPERATING" },
+  "233": { segment: "HYBRID", format: "HOSPITAL", status: "OPERATING" },
+  "110": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "222": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "240": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "265": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "214": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "273": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "221": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "236": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "257": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "217": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "270": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "296": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "293": { segment: "HYBRID", format: "NEIGHBOURHOOD", status: "OPERATING" },
+  "263": { segment: "AS USUAL", format: "DRIVE THRU", status: "OPERATING" },
+  "280": { segment: "HYBRID", format: "AIRPORT", status: "OPERATING" },
+  "292": { segment: "PLANNED", format: "PLANNED", status: "PLANNED" },
+  "286": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "OPERATING" },
+  "309": { segment: "PLANNED", format: "PLANNED", status: "PLANNED" },
+  "310": { segment: "PLANNED", format: "PLANNED", status: "PLANNED" },
+  "2": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "CLOSED" },
+  "47": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "CLOSED" },
+  "52": { segment: "AS USUAL", format: "MALLS", status: "CLOSED" },
+  "71": { segment: "AS USUAL", format: "UNIVERSITIES - BOYS", status: "CLOSED" },
+  "118": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "CLOSED" },
+  "151": { segment: "AS USUAL", format: "UNIVERSITIES - BOYS", status: "CLOSED" },
+  "198": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "CLOSED" },
+  "202": { segment: "AS USUAL", format: "NEIGHBOURHOOD", status: "CLOSED" },
+  "215": { segment: "AS USUAL", format: "UNIVERSITIES - BOYS", status: "CLOSED" },
+  "260": { segment: "AS USUAL", format: "HOSPITAL", status: "CLOSED" },
+  "261": { segment: "AS USUAL", format: "AIRPORT", status: "CLOSED" },
+  "269": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "CLOSED" },
+  "271": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "CLOSED" },
+  "272": { segment: "DRIVE THRU KIOSKS", format: "DRIVE THRU", status: "CLOSED" },
+  "900041": { segment: "EVNT & CAT", format: "Regular Event", status: "OPERATING" },
+  "900068": { segment: "EVNT & CAT", format: "Regular Event", status: "OPERATING" },
+  "900093": { segment: "EVNT & CAT", format: "Regular Event", status: "OPERATING" },
+  "900099": { segment: "BETA", format: "BETA", status: "OPERATING" },
+  "9000101": { segment: "EVNT & CAT", format: "Regular Event", status: "CLOSED" },
+  "9000102": { segment: "EVNT & CAT", format: "Short Term Event", status: "OPERATING" },
+  "9000103": { segment: "EVNT & CAT", format: "Short Term Event", status: "OPERATING" },
+  "9000104": { segment: "EVNT & CAT", format: "Regular Event", status: "OPERATING" },
+  "9000105": { segment: "EVNT & CAT", format: "Short Term Event", status: "CLOSED" },
+  "9000106": { segment: "EVNT & CAT", format: "Regular Event", status: "OPERATING" }
+};
   // Create background overlay for mobile globally so switchTab can access it
 const overlay = document.createElement('div');
 overlay.className = 'sidebar-overlay';
@@ -1474,6 +1576,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
   let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
+  let closedStoreOnly = false;
 let faLfl = false, faNew = false, faAds = false;
   
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
@@ -1683,11 +1786,15 @@ let faLfl = false, faNew = false, faAds = false;
 
         let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
         if (isFormula(area) || !area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
-                
+
+        // Check Excel first, then check our hardcoded mapping
+        const mapInfo = STORE_MAPPING[code] || {};
+        
         const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
-        const segment = segRaw || 'UNMAPPED'; 
+        const segment = segRaw || mapInfo.segment || 'UNMAPPED'; 
+        
         const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
-        const format = fmtRaw || 'UNMAPPED';
+        const format = fmtRaw || mapInfo.format || 'UNMAPPED';
         
         const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
@@ -2030,6 +2137,16 @@ $('newStoreToggle').addEventListener('click', () => {
   if(newStoreOnly && lflOnly) { lflOnly = false; $('lflToggle').classList.remove('active'); }
   applyFiltersAndRender(); 
 });
+    $('closedStoreToggle').addEventListener('click', () => { 
+    closedStoreOnly = !closedStoreOnly; 
+    $('closedStoreToggle').classList.toggle('active', closedStoreOnly); 
+    // Ensure LFL and New store filters turn off if Closed is turned on
+    if(closedStoreOnly) { 
+      lflOnly = false; $('lflToggle').classList.remove('active'); 
+      newStoreOnly = false; $('newStoreToggle').classList.remove('active'); 
+    }
+    applyFiltersAndRender(); 
+  });
   dayFrom.addEventListener('change', () => applyFiltersAndRender());
   dayTo.addEventListener('change', () => applyFiltersAndRender());
     $('wastageInput').addEventListener('change', e => {
@@ -3056,14 +3173,18 @@ function renderTable(data) {
       return currentSort.dir === 'asc' ? va - vb : vb - va;
     });
   } else rows.sort((a, b) => b.net2026 - a.net2026);
- if (lflOnly) {
-  rows = rows.filter(g => g.net2025 > 0);
-} else if (newStoreOnly) {
-  // Find all stores that had sales in 2025
-  const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
-  // Keep only stores that are NOT in that list
-  rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
-}
+   if (lflOnly) {
+    rows = rows.filter(g => g.net2025 > 0);
+  } else if (newStoreOnly) {
+    const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
+    rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
+  } else if (closedStoreOnly) {
+    // Show ONLY stores that are marked as CLOSED in the mapping
+    rows = rows.filter(g => {
+      const mapInfo = STORE_MAPPING[g.storeCode] || {};
+      return mapInfo.status === 'CLOSED';
+    });
+  }
 
   const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
   let html = '';

@@ -1668,7 +1668,7 @@ let faLfl = false, faNew = false, faAds = false;
     });
   });
 
-  function processWorkbook(buffer, name, meta) {
+   function processWorkbook(buffer, name, meta) {
     try {
       const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false, raw: true });
       const sheetName = wb.SheetNames.includes('Sheet1') ? 'Sheet1' : wb.SheetNames[0];
@@ -1701,6 +1701,7 @@ let faLfl = false, faNew = false, faAds = false;
       // 4. Find Net Sales (Prioritize 'net' over 'gross')
       let cNet = lower.findIndex(h => h.includes('net') && (h.includes('amount') || h.includes('sales') || h === 'net'));
       let cGross = lower.findIndex(h => h.includes('gross') || (h.includes('amount') && !h.includes('tax') && !h.includes('net')));
+      let cAmt = lower.findIndex(h => h === 'amount' || h === 'amt' || h.includes('total amount')); // <-- FIXED: Added cAmt
       
       // 5. Find Target & Area
       let cTarget = lower.findIndex(h => h.includes('target') || h.includes('budget') || h.includes('plan'));
@@ -1710,12 +1711,13 @@ let faLfl = false, faNew = false, faAds = false;
       let cCode = lower.findIndex(h => h === 'code' || h.includes('store code') || h.includes('str code'));
       let cTax = lower.findIndex(h => h.includes('tax'));
 
-      // 6. Safe Fallbacks (Don't default to index 0/1 if not found, default to -1 to skip)
-      if (cStore < 0) cStore = 0; // Assuming Store is always first if not named
+      // 6. Safe Fallbacks
+      if (cStore < 0) cStore = 0; 
       if (cDate < 0) cDate = -1; 
       if (cOrders < 0) cOrders = -1;
       if (cNet < 0) cNet = -1;
       if (cGross < 0) cGross = -1;
+      if (cAmt < 0) cAmt = -1;
 
       const rows = []; 
       let skipped = 0;
@@ -1732,32 +1734,33 @@ let faLfl = false, faNew = false, faAds = false;
         const orders = Number(String(row[cOrders] ?? '').replace(/,/g, '')) || 0;
         const gross = Number(String(row[cGross] ?? '').replace(/,/g, '')) || 0;
         
-       let target = 0;
-if (cTarget >= 0) {
-  const tv = row[cTarget];
-  if (tv != null && !isFormula(tv)) {
-    const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0;
-    if (n > 0 && n < 1e9) target = n;   // sanity cap
-  }
-}
+        let target = 0;
+        if (cTarget >= 0) {
+          const tv = row[cTarget];
+          if (tv != null && !isFormula(tv)) {
+            const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0;
+            if (n > 0 && n < 1e9) target = n;   // sanity cap
+          }
+        }
 
-let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
-if (isFormula(area) || !area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
-        
+        let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
+        if (isFormula(area) || !area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
+                
         const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
-        const segment = segRaw || 'UNMAPPED'; // Fallback tables omitted for clean paste, this is fine
+        const segment = segRaw || 'UNMAPPED'; 
         const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
         const format = fmtRaw || 'UNMAPPED';
         
         const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
-let net = 0;
-if (explicitNet !== null && explicitNet !== 0) net = explicitNet;   // prefer Net Amount column
-else if (gross > 0) net = gross - (tax || 0);
-else if (amt !== null) net = amt;
-else net = gross;
         
+        let net = 0;
+        if (explicitNet !== null && explicitNet !== 0) net = explicitNet;   // prefer Net Amount column
+        else if (gross > 0) net = gross - (tax || 0);
+        else if (amt !== null) net = amt;
+        else net = gross;
+                
         rows.push({ 
           store, storeCode: code, dob, dobStr: toYMD(dob), 
           year: dob ? dob.getFullYear() : null, 
@@ -1768,7 +1771,7 @@ else net = gross;
         });
       }
 
-      if (!rows.length) throw new Error('No valid rows');
+      if (!rows.length) throw new Error('No valid rows found. Check your file columns.');
       console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
       
       const clean = rows.filter(r => {

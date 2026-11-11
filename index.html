@@ -3283,7 +3283,8 @@ if (wLookup) {
     tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
   });
 }
-
+// ADD THIS LINE RIGHT HERE:
+window.renderTable = renderTable; 
   // ===== MODAL =====
   const storeDayModal = $('storeDayModal');
   const modalStoreName = $('modalStoreName'), modalStoreSub = $('modalStoreSub');

@@ -4053,69 +4053,124 @@ ${clone.outerHTML}
     buildFormatAmTable(data, 'am',      'faAmBody');
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.fa-lfl-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        faLfl = !faLfl; 
-        document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.toggle('active', faLfl));
-        if (faLfl && faNew) { faNew = false; document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.remove('active')); }
-        if (window.__filteredData) renderFormatAm(window.__filteredData);
-      });
-    });
-
-    document.querySelectorAll('.fa-new-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        faNew = !faNew; 
-        document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.toggle('active', faNew));
-        if (faNew && faLfl) { faLfl = false; document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.remove('active')); }
-        if (window.__filteredData) renderFormatAm(window.__filteredData);
-      });
-    });
-
-    document.querySelectorAll('.fa-ads-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        faAds = !faAds; 
-        document.querySelectorAll('.fa-ads-btn').forEach(b => b.classList.toggle('active', faAds));
-        if (window.__filteredData) renderFormatAm(window.__filteredData);
-      });
-    });
+  // Direct event listeners attached to the document (works for dynamically added buttons)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.fa-lfl-btn')) {
+      faLfl = !faLfl; 
+      document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.toggle('active', faLfl));
+      if (faLfl && faNew) { faNew = false; document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.remove('active')); }
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    }
+    
+    if (e.target.closest('.fa-new-btn')) {
+      faNew = !faNew; 
+      document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.toggle('active', faNew));
+      if (faNew && faLfl) { faLfl = false; document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.remove('active')); }
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    }
+    
+    if (e.target.closest('.fa-ads-btn')) {
+      faAds = !faAds; 
+      document.querySelectorAll('.fa-ads-btn').forEach(b => b.classList.toggle('active', faAds));
+      if (window.__filteredData) renderFormatAm(window.__filteredData);
+    }
+  });
 
     document.querySelectorAll('.fa-export-excel').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tableId = btn.dataset.table;
-        const t = document.getElementById(tableId);
-        if (!t) return;
-        const aoa = [];
-        t.querySelectorAll('thead tr').forEach(tr => {
-          const row = [];
-          tr.querySelectorAll('th').forEach(th => {
-            const cs = parseInt(th.getAttribute('colspan') || 1);
-            row.push(th.innerText.trim());
-            for (let i = 1; i < cs; i++) row.push('');
-          });
-          aoa.push(row);
-        });
-        t.querySelectorAll('tbody tr').forEach(tr => {
-          const row = [];
-          tr.querySelectorAll('td').forEach(td => {
-            const x = td.innerText.trim().replace(/,/g, '');
-            row.push(x === '—' ? '' : x);
-          });
-          aoa.push(row);
-        });
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Format-AM');
+        
+        const tables = [
+          { id: 'faTableSegment', name: 'Segment' },
+          { id: 'faTableFormat', name: 'Format' },
+          { id: 'faTableAm', name: 'AM' }
+        ];
+
+        tables.forEach(t => {
+          const tableEl = document.getElementById(t.id);
+          if (!tableEl) return;
+
+          const aoa = [];
+          tableEl.querySelectorAll('thead tr').forEach(tr => {
+            const row = [];
+            tr.querySelectorAll('th').forEach(th => {
+              const cs = parseInt(th.getAttribute('colspan') || 1);
+              row.push(th.innerText.trim());
+              for (let i = 1; i < cs; i++) row.push('');
+            });
+            aoa.push(row);
+          });
+          tableEl.querySelectorAll('tbody tr').forEach(tr => {
+            const row = [];
+            tr.querySelectorAll('td').forEach(td => {
+              const x = td.innerText.trim().replace(/,/g, '');
+              row.push(x === '—' ? '' : x);
+            });
+            aoa.push(row);
+          });
+
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          XLSX.utils.book_append_sheet(wb, ws, t.name);
+        });
+
         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `${tableId}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.href = url; a.download = `Format-AM_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast('Excel exported', 'success');
+        showToast('All Format/AM tables exported to one Excel file', 'success');
       });
     });
+      document.querySelectorAll('.fa-export-pdf').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tableId = btn.dataset.table;
+        const tableContainer = document.getElementById(tableId)?.closest('.table-container');
+        if (!tableContainer) return;
+
+        const clone = tableContainer.cloneNode(true);
+        // Remove buttons/controls from the PDF clone
+        const controls = clone.querySelector('.table-controls');
+        if (controls) controls.remove();
+        
+        const title = clone.querySelector('h3').innerText.trim();
+
+        const printHTML = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+        <style>
+          @page { size: A4 landscape; margin: 8mm; }
+          body { font-family: 'Inter', system-ui, sans-serif; color:#0b1b33; background:#fff; margin:0; padding:0; }
+          h1 { font-size:16px; margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid #3b82f6; }
+          table { width:100%; border-collapse:collapse; font-size:8px; }
+          th, td { padding:4px 6px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
+          th:first-child, td:first-child { text-align:left; }
+          thead th { background:#f8fafc; font-size:7px; text-transform:uppercase; }
+          th.group-2025 { background:#eff6ff; color:#1d4ed8; }
+          th.group-prev { background:#fef9ee; color:#b45309; }
+          th.group-2026 { background:#f0fdf4; color:#15803d; }
+          th.group-ratios { background:#faf5ff; color:#7e22ce; }
+          th.group-waste { background:#fef2f2; color:#b91c1c; }
+          td.cell-2025 { background:#f8fbff; }
+          td.cell-prev { background:#fffdf4; }
+          td.cell-2026 { background:#f7fdf9; }
+          tr.subtotal-row td { background:#e8f0fe !important; font-weight:800 !important; border-top:1px solid #3b82f6 !important; }
+          .cell-positive, .pct-up { color:#15803d; }
+          .cell-negative, .pct-down { color:#b91c1c; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
+          thead { display: table-header-group; }
+          .toolbar { position:fixed; top:10px; right:10px; background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer; z-index:9999; }
+          @media print { .toolbar { display:none; } }
+        </style></head><body>
+        <button class="toolbar" onclick="window.print()">Save as PDF</button>
+        <h1>${title} · ${new Date().toLocaleString()}</h1>
+        ${clone.outerHTML}
+        </body></html>`;
+        
+        const w = window.open('', '_blank');
+        if (!w) { showToast('Popup blocked', 'error'); return; }
+        w.document.open(); w.document.write(printHTML); w.document.close();
+        showToast('PDF preview opened', 'success');
+      });
   });
 
 

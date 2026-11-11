@@ -1668,7 +1668,7 @@ let faLfl = false, faNew = false, faAds = false;
     });
   });
 
-   function processWorkbook(buffer, name, meta) {
+     function processWorkbook(buffer, name, meta) {
     try {
       const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false, raw: true });
       const sheetName = wb.SheetNames.includes('Sheet1') ? 'Sheet1' : wb.SheetNames[0];
@@ -1684,8 +1684,7 @@ let faLfl = false, faNew = false, faAds = false;
       
       const headers = jsonData[hIdx].map(h => h == null ? '' : String(h).trim());
       const lower = headers.map(h => h.toLowerCase());
-      const findCol = kw => { for (let k = 0; k < kw.length; k++) { const idx = lower.findIndex(h => h.includes(kw[k])); if (idx > -1) return idx; } return -1; };
-
+      
       // 1. Find Store Name
       let cStore = lower.findIndex(h => h.includes('store') || h.includes('branch') || h.includes('shop') || h.includes('str_name'));
       
@@ -1701,7 +1700,7 @@ let faLfl = false, faNew = false, faAds = false;
       // 4. Find Net Sales (Prioritize 'net' over 'gross')
       let cNet = lower.findIndex(h => h.includes('net') && (h.includes('amount') || h.includes('sales') || h === 'net'));
       let cGross = lower.findIndex(h => h.includes('gross') || (h.includes('amount') && !h.includes('tax') && !h.includes('net')));
-      let cAmt = lower.findIndex(h => h === 'amount' || h === 'amt' || h.includes('total amount')); // <-- FIXED: Added cAmt
+      let cAmt = lower.findIndex(h => h === 'amount' || h === 'amt' || h.includes('total amount'));
       
       // 5. Find Target & Area
       let cTarget = lower.findIndex(h => h.includes('target') || h.includes('budget') || h.includes('plan'));
@@ -1722,6 +1721,7 @@ let faLfl = false, faNew = false, faAds = false;
       const rows = []; 
       let skipped = 0;
       
+      // --- THIS IS THE PART THAT WAS MISSING/BROKEN ---
       for (let i = hIdx + 1; i < jsonData.length; i++) {
         const row = jsonData[i]; 
         if (!row || !row.length) { skipped++; continue; }
@@ -1739,7 +1739,7 @@ let faLfl = false, faNew = false, faAds = false;
           const tv = row[cTarget];
           if (tv != null && !isFormula(tv)) {
             const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0;
-            if (n > 0 && n < 1e9) target = n;   // sanity cap
+            if (n > 0 && n < 1e9) target = n;
           }
         }
 
@@ -1756,7 +1756,7 @@ let faLfl = false, faNew = false, faAds = false;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
         
         let net = 0;
-        if (explicitNet !== null && explicitNet !== 0) net = explicitNet;   // prefer Net Amount column
+        if (explicitNet !== null && explicitNet !== 0) net = explicitNet; 
         else if (gross > 0) net = gross - (tax || 0);
         else if (amt !== null) net = amt;
         else net = gross;
@@ -1770,9 +1770,9 @@ let faLfl = false, faNew = false, faAds = false;
           orders, amount: net, gross, net, target, area, segment, format 
         });
       }
+      // ------------------------------------------------
 
       if (!rows.length) throw new Error('No valid rows found. Check your file columns.');
-      console.log('[DEBUG] total parsed rows:', rows.length, '| skipped:', skipped, '| sample:', rows[0]);
       
       const clean = rows.filter(r => {
         const l = String(r.area || '').toLowerCase().trim();

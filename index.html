@@ -3302,6 +3302,256 @@ if (wLookup) {
     tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
   });
 }
+  function renderTable(data) {
+  const tm = window.__targetMaps || buildTargetMap(rawData);
+  const sY = window.__salesYear;
+
+  // Build wastage map ONCE, before the loop
+  const wIdx = typeof getFilteredWastage === 'function' ? buildWastageIndex(getFilteredWastage(), data) : [];
+  const wMap = new Map();
+  wIdx.forEach(w => wMap.set(`${w.storeCode}||${w.month}`, w));
+
+  const gMap = new Map();
+  
+  // FIX: Strictly filter the rows to only show the months currently selected in the filter
+  const selM = [...FilterState.month.selected].map(Number);
+  const activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
+
+  activeRows.forEach(r => {
+    const k = `${r.storeCode}||${r.area}||${r.month}`;
+    if (!gMap.has(k)) gMap.set(k, {
+      store: r.store,
+      storeCode: r.storeCode,
+      area: r.area,
+      segment: r.segment,
+      format: r.format,
+      month: r.month,
+      monthLabel: r.monthLabel,
+      target: 0,
+      targetLoaded: false,
+      net2025: 0,
+      orders2025: 0,
+      net2026: 0,
+      orders2026: 0,
+      days2025Set: new Set(),
+      days2026Set: new Set()
+    });
+    const g = gMap.get(k);
+    if (!g.targetLoaded) {
+      const tY = sY != null ? sY : r.year;
+      const gi = computeGroupTarget(tm, data, data, r.storeCode, r.area, tY, r.month, false);
+      g.target = gi.target;
+      g.targetLoaded = true;
+    }
+    if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0 && r.day != null) g.days2025Set.add(r.day); }
+    else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
+  });
+
+  const ctx = getMonthContext();
+  const prevLbl = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
+  const h25 = $('groupHeader2025'); if (h25) h25.textContent = '2025';
+  const hp = $('groupHeaderPrev'); if (hp) hp.textContent = prevLbl;
+  const h26 = $('groupHeader2026'); if (h26) h26.textContent = '2026';
+
+  const sS = [...FilterState.store.selected], sA = [...FilterState.area.selected];
+  const tS = FilterState.store.options.length, tA = FilterState.area.options.length;
+  const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
+
+  const prevMap = new Map();
+  const prevDaySets = new Map();
+  rawData.forEach(r => {
+    if (r.year !== ctx.prevY || r.month !== ctx.prevM) return;
+    if (sS.length && sS.length !== tS && !sS.includes(r.storeCode)) return;
+    if (sA.length && sA.length !== tA && !sA.includes(r.area)) return;
+    if (dF != null && r.day != null && r.day < dF) return;
+    if (dT != null && r.day != null && r.day > dT) return;
+    const k = `${r.storeCode}||${r.area}`;
+    const cur = prevMap.get(k) || { net: 0, orders: 0, activeDays: 0 };
+    cur.net += r.net; cur.orders += r.orders;
+    prevMap.set(k, cur);
+    if (r.net > 0 && r.day != null) {
+      if (!prevDaySets.has(k)) prevDaySets.set(k, new Set());
+      prevDaySets.get(k).add(r.day);
+    }
+  });
+  prevMap.forEach((v, k) => {
+    const s = prevDaySets.get(k);
+    v.activeDays = s ? s.size : 0;
+  });
+  
+  let rows = [...gMap.values()].map(g => ({
+    ...g,
+    days2025: g.days2025Set.size,
+    days2026: g.days2026Set.size
+  }));
+  const rankMap = new Map();
+  [...rows].sort((a, b) => b.net2026 - a.net2026).slice(0, 3).forEach((r, i) => rankMap.set(r.storeCode, i + 1));
+
+  if (currentSort.key) {
+    rows.sort((a, b) => {
+      let va, vb;
+      switch (currentSort.key) {
+        case 'store': va = a.store; vb = b.store; break;
+        case 'manager': va = a.area; vb = b.area; break;
+        case 'segment': va = a.segment; vb = b.segment; break;
+        case 'format': va = a.format; vb = b.format; break;
+        case 'month': va = a.month; vb = b.month; break;
+        case 'target': va = a.target; vb = b.target; break;
+        case 'net2025': va = a.net2025; vb = b.net2025; break;
+        case 'net2026': va = a.net2026; vb = b.net2026; break;
+        case 'days2025': va = a.days2025; vb = b.days2025; break;
+        case 'days2026': va = a.days2026; vb = b.days2026; break;
+        case 'lfl': va = a.net2025 > 0 ? a.net2026 / a.net2025 : 0; vb = b.net2025 > 0 ? b.net2026 / b.net2025 : 0; break;
+        case 'tgt': va = a.target > 0 ? a.net2026 / a.target : 0; vb = b.target > 0 ? b.net2026 / b.target : 0; break;
+      }
+      if (typeof va === 'string') return currentSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return currentSort.dir === 'asc' ? va - vb : vb - va;
+    });
+  } else rows.sort((a, b) => b.net2026 - a.net2026);
+  
+  if (lflOnly) {
+    rows = rows.filter(g => g.net2025 > 0);
+  } else if (newStoreOnly) {
+    const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
+    rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
+  } else if (closedStoreOnly) {
+    rows = rows.filter(g => {
+      const mapInfo = STORE_MAPPING[g.storeCode] || {};
+      return mapInfo.status === 'CLOSED';
+    });
+  }
+
+  const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
+  let html = '';
+  
+  rows.forEach(g => {
+    const rawAt25 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
+    const rawAt26 = g.orders2026 > 0 ? g.net2026 / g.orders2026 : 0;
+    let dN25, dO25, dA25, dN26, dO26, dA26, dT;
+    if (adsMode) { 
+      const dy25 = g.days2025 > 0 ? g.days2025 : 1, dy26 = g.days2026 > 0 ? g.days2026 : 1; 
+      dN25 = g.net2025 / dy25; dO25 = g.orders2025 / dy25; dA25 = rawAt25; 
+      dN26 = g.net2026 / dy26; dO26 = g.orders2026 / dy26; dA26 = rawAt26; 
+      dT = g.target / (g.days2026 > 0 ? g.days2026 : 1); 
+    } else { 
+      dN25 = g.net2025; dO25 = g.orders2025; dA25 = rawAt25; 
+      dN26 = g.net2026; dO26 = g.orders2026; dA26 = rawAt26; 
+      dT = g.target; 
+    }
+    
+    st.target += g.target; st.net2025 += g.net2025; st.orders2025 += g.orders2025; st.net2026 += g.net2026; st.orders2026 += g.orders2026;
+    const wLookup = wMap.get(`${g.storeCode}||${g.month}`);
+    if (wLookup) {
+      st.wasteCost += wLookup.wastageCost || 0;
+      st.wasteQty += wLookup.wastageQty || 0;
+    }
+    
+    const p = prevMap.get(`${g.storeCode}||${g.area}`) || { net: 0, orders: 0, activeDays: 0 };
+    const prevAt = p.orders > 0 ? p.net / p.orders : 0;
+    let dpN = p.net, dpO = p.orders;
+    if (adsMode) { const pd = p.activeDays > 0 ? p.activeDays : 1; dpN = p.net / pd; dpO = p.orders / pd; }
+    
+    let cls = '';
+    if (g.net2025 > 0 || g.net2026 > 0) cls = g.net2026 >= g.net2025 ? 'cell-positive' : 'cell-negative';
+    const lflF = fmtSignedPct(g.net2025 > 0 ? (g.net2026 / g.net2025) : NaN);
+    const tgtF = fmtSignedPct(g.target > 0 ? (g.net2026 / g.target) : NaN);
+    const momF = fmtSignedPct(p.net > 0 ? (g.net2026 / p.net) : NaN);
+    
+    let sName = g.store;
+    const pfx = new RegExp(`^\\s*${g.storeCode}\\s*-\\s*`);
+    if (pfx.test(sName)) sName = sName.replace(pfx, `${g.storeCode} - `);
+    else if (!sName.startsWith(g.storeCode)) sName = `${g.storeCode} - ${g.store}`;
+    
+    const rank = rankMap.get(g.storeCode);
+    let rankHtml = '';
+    if (rank === 1) rankHtml = '<span class="rank-badge rank-1">1</span>';
+    else if (rank === 2) rankHtml = '<span class="rank-badge rank-2">2</span>';
+    else if (rank === 3) rankHtml = '<span class="rank-badge rank-3">3</span>';
+    const missed = g.target > 0 && g.net2026 < g.target;
+    const rowCls = `store-clickable ${missed ? 'missed-target' : ''}`;
+
+    // Wastage lookup
+    const w = wMap.get(`${g.storeCode}||${g.month}`);
+    const wCost = w ? fmtCur(w.wastageCost) : '—';
+    const wQty = w ? fmtNum(w.wastageQty) : '—';
+    const wPct = w && w.wastagePct != null ? (w.wastagePct * 100).toFixed(2) + '%' : '—';
+    const wCls = w && w.wastagePct != null ? (w.wastagePct > 0.05 ? 'cell-negative' : '') : '';
+
+    html += `<tr class="${rowCls}" data-store-code="${escapeAttr(g.storeCode)}" data-store-area="${escapeAttr(g.area)}">
+      <td class="left-cell col-store"><strong>${rankHtml}${escapeHtml(sName)}</strong></td>
+      <td class="left-cell col-manager">${escapeHtml(g.area)}</td>
+      <td class="left-cell col-manager">${escapeHtml(g.segment || '—')}</td>
+      <td class="left-cell col-manager">${escapeHtml(g.format || '—')}</td>
+      <td>${g.monthLabel || '—'}</td>
+      <td>${g.target > 0 ? fmtCur(dT) : '—'}</td>
+      <td class="cell-2025">${g.days2025 || 0}</td>
+      <td class="cell-2025">${fmtCur(dN25)}</td>
+      <td class="cell-2025">${fmtNum(dO25)}</td>
+      <td class="cell-2025">${fmtAT(dA25)}</td>
+      <td class="cell-prev">${p.activeDays || 0}</td>
+      <td class="cell-prev">${fmtCur(dpN)}</td>
+      <td class="cell-prev">${fmtNum(dpO)}</td>
+      <td class="cell-prev">${fmtAT(prevAt)}</td>
+      <td class="cell-2026 ${cls}">${g.days2026 || 0}</td>
+      <td class="cell-2026 ${cls}">${fmtCur(dN26)}</td>
+      <td class="cell-2026 ${cls}">${fmtNum(dO26)}</td>
+      <td class="cell-2026 ${cls}">${fmtAT(dA26)}</td>
+      <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
+      <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
+      <td class="cell-ratios ${momF.cls}">${momF.text}</td>
+      <td class="cell-waste ${wCls}">${wCost}</td>
+      <td class="cell-waste ${wCls}">${wPct}</td>
+      <td class="cell-waste">${wQty}</td>
+    </tr>`;
+  });
+
+  if (rows.length) {
+    let c25 = 0, c26 = 0, cp = 0, td25 = 0, td26 = 0, tdp = 0;
+    rows.forEach(g => { if (g.days2025 > 0) { td25 += g.days2025; c25++; } if (g.days2026 > 0) { td26 += g.days2026; c26++; } const p = prevMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 }; if (p.activeDays > 0) { tdp += p.activeDays; cp++; } });
+    const avg25 = c25 > 0 ? td25 / c25 : 0, avg26 = c26 > 0 ? td26 / c26 : 0, avgp = cp > 0 ? tdp / cp : 0;
+    const stAt25 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
+    const stAt26 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
+    let sDN25 = st.net2025, sDO25 = st.orders2025, sDN26 = st.net2026, sDO26 = st.orders2026, sDpN = 0, sDpO = 0, sDT = st.target;
+    let stPrevNet = 0, stPrevOrders = 0;
+    rows.forEach(g => { const p = prevMap.get(`${g.storeCode}||${g.area}`) || { net: 0, orders: 0 }; stPrevNet += p.net; stPrevOrders += p.orders; });
+    sDpN = stPrevNet; sDpO = stPrevOrders;
+    if (adsMode) { sDN25 = st.net2025 / (td25 || 1); sDO25 = st.orders2025 / (td25 || 1); sDN26 = st.net2026 / (td26 || 1); sDO26 = st.orders2026 / (td26 || 1); sDpN = stPrevNet / (tdp || 1); sDpO = stPrevOrders / (tdp || 1); sDT = st.target / (td26 || 1); }
+    const stLfl = fmtSignedPct(sDN25 > 0 ? (sDN26 / sDN25) : NaN);
+    const stTgt = fmtSignedPct(sDT > 0 ? (sDN26 / sDT) : NaN);
+    const stMom = fmtSignedPct(sDpN > 0 ? (sDN26 / sDpN) : NaN);
+    let stCls = '';
+    if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
+    const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
+     html += `<tr class="subtotal-row">
+      <td colspan="6" class="left-cell">Subtotal (${rows.length} rows)</td>
+      <td class="cell-2025">${Math.round(avg25)}</td>
+      <td class="cell-2025">${fmtCur(sDN25)}</td>
+      <td class="cell-2025">${fmtNum(sDO25)}</td>
+      <td class="cell-2025">${fmtAT(stAt25)}</td>
+      <td class="cell-prev">${Math.round(avgp)}</td>
+      <td class="cell-prev">${fmtCur(sDpN)}</td>
+      <td class="cell-prev">${fmtNum(sDpO)}</td>
+      <td class="cell-prev">${fmtAT(stPrevOrders > 0 ? stPrevNet / stPrevOrders : 0)}</td>
+      <td class="cell-2026 ${stCls}">${Math.round(avg26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
+      <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
+      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
+      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
+      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
+      <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
+      <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
+      <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
+    </tr>`;
+  }
+  if (!rows.length) html = '<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
+  
+  $('tableBody').innerHTML = html;
+  
+  $('tableBody').querySelectorAll('tr.store-clickable').forEach(tr => {
+    tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
+  });
+}
   // ===== MODAL =====
   const storeDayModal = $('storeDayModal');
   const modalStoreName = $('modalStoreName'), modalStoreSub = $('modalStoreSub');

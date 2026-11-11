@@ -1668,7 +1668,7 @@ let faLfl = false, faNew = false, faAds = false;
     });
   });
 
-     function processWorkbook(buffer, name, meta) {
+  function processWorkbook(buffer, name, meta) {
     try {
       const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false, raw: true });
       const sheetName = wb.SheetNames.includes('Sheet1') ? 'Sheet1' : wb.SheetNames[0];
@@ -1721,7 +1721,7 @@ let faLfl = false, faNew = false, faAds = false;
       const rows = []; 
       let skipped = 0;
       
-      // --- THIS IS THE PART THAT WAS MISSING/BROKEN ---
+      // --- THIS IS THE PART THAT WAS MISSING ---
       for (let i = hIdx + 1; i < jsonData.length; i++) {
         const row = jsonData[i]; 
         if (!row || !row.length) { skipped++; continue; }

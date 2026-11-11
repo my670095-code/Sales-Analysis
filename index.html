@@ -3817,6 +3817,7 @@ window.addEventListener('resize', () => {
 });
 </script>
 <script>
+
 // ===== OVERRIDE: STORE DAY MODAL WITH WASTAGE & CHART =====
 document.addEventListener('DOMContentLoaded', () => {
   
@@ -3984,20 +3985,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const cellCls = (b.d2025 > 0 || b.d2026 > 0) ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
       const wasteCls = wPct > 5 ? 'high' : wPct > 2 ? 'medium' : 'low';
 
-         chartLabels.push(`Day ${d}`);
-      
+      chartLabels.push(`Day ${d}`);
       chartSales2025.push(b.d2025);
       chartSalesPrev.push(b.dPrev);
       chartSales2026.push(b.d2026);
-      
       chartAdt2025.push(b.o2025);
       chartAdtPrev.push(b.oPrev);
       chartAdt2026.push(b.o2026);
-      
       chartAt2025.push(at25);
       chartAtPrev.push(atP);
       chartAt2026.push(at26);
-      
       chartWaste.push(b.wCost);
 
       html += `<tr>
@@ -4047,8 +4044,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     modalDayBody.innerHTML = html;
 
-
-        currentModalData = { 
+    currentModalData = { 
       labels: chartLabels, 
       sales2025: chartSales2025, 
       salesPrev: chartSalesPrev, 
@@ -4061,6 +4057,7 @@ document.addEventListener('DOMContentLoaded', () => {
       at2026: chartAt2026,
       waste: chartWaste 
     };
+    
     document.getElementById('storeDayModal').classList.add('open');
     document.getElementById('modalTableView').style.display = 'block';
     document.getElementById('modalChartView').style.display = 'none';
@@ -4125,7 +4122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         grid: { 
           drawOnChartArea: true, 
           color: 'rgba(0,0,0,0.04)',
-          // Only show grid lines for the top and bottom axis to keep it clean
           display: index === 2 || index === 0 
         }
       };
@@ -4137,7 +4133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
           label: `2025 ${labelSuffix}`.trim(), 
           data: data2025, 
-          yAxisID: 'y-2025', // Locked to the top track
+          yAxisID: 'y-2025', 
           borderColor: 'rgba(148,163,184,1)', 
           backgroundColor: 'transparent',
           borderDash: [8, 8], 
@@ -4149,7 +4145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
           label: `Prev Month ${labelSuffix}`.trim(), 
           data: dataPrev, 
-          yAxisID: 'y-prev', // Locked to the middle track
+          yAxisID: 'y-prev', 
           borderColor: 'rgba(245,158,11,1)', 
           backgroundColor: 'transparent',
           borderDash: [12, 8], 
@@ -4161,7 +4157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { 
           label: `2026 ${labelSuffix}`.trim(), 
           data: data2026, 
-          yAxisID: 'y-2026', // Locked to the bottom track
+          yAxisID: 'y-2026', 
           borderColor: '#3b82f6', 
           backgroundColor: 'rgba(59,130,246,0.1)', 
           borderDash: [16, 8], 
@@ -4181,7 +4177,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (currentChartMetric === 'at') {
       datasets = applyStyles(currentModalData.at2025, currentModalData.atPrev, currentModalData.at2026, 'AT');
     } else if (currentChartMetric === 'waste') {
-      // If viewing wastage, we don't need to stack. Just use a single normal axis.
       scales = { y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Wastage Amount', font: {size: 10} } } };
       datasets = [
         { 
@@ -4218,7 +4213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = dataset.data[index];
             
             if (data > 0) {
-              let yOffset = -8; // Uniform offset since they are on separate tracks now
+              let yOffset = -8; 
 
               ctx.fillStyle = dataset.borderColor;
               let valText = currentChartMetric === 'at' ? data.toFixed(1) : data.toLocaleString('en-US', {maximumFractionDigits:0});
@@ -4226,7 +4221,6 @@ document.addEventListener('DOMContentLoaded', () => {
               const textWidth = ctx.measureText(valText).width;
               const padding = 3;
               
-              // Draw background pill so the text is readable over grid lines
               ctx.fillStyle = bgColor;
               ctx.beginPath();
               ctx.roundRect(
@@ -4238,7 +4232,6 @@ document.addEventListener('DOMContentLoaded', () => {
               );
               ctx.fill();
 
-              // Draw the text
               ctx.fillStyle = dataset.borderColor;
               ctx.fillText(valText, element.x, element.y + yOffset);
             }
@@ -4281,7 +4274,7 @@ document.addEventListener('DOMContentLoaded', () => {
           x: {
             grid: { display: false } 
           },
-          ...scales // Inject our stacked axes here
+          ...scales 
         }
       },
       plugins: [inlineLabelsPlugin]
@@ -4320,7 +4313,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTable.classList.add('btn-outline');
         btnTable.style.color = 'var(--text-muted)';
         
-        // Re-render after container is visible
         setTimeout(() => {
           if (storeDayChartInstance) {
             storeDayChartInstance.destroy();
@@ -4330,6 +4322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
       });
   }
+  
   // Chart Metric Toggles
   document.querySelectorAll('.chart-toggle').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -4350,3 +4343,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+

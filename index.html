@@ -856,9 +856,9 @@
           <thead>
             <tr>
               <th colspan="1" class="left-cell" style="border-bottom:2px solid var(--border);">&nbsp;</th>
-              <th colspan="4" class="group-2025">2025</th>
-              <th colspan="4" class="group-prev">Prev Month</th>
-              <th colspan="4" class="group-2026">2026</th>
+               <th colspan="4" class="group-2025" id="faHeader2025">2025</th>
+              <th colspan="4" class="group-prev" id="faHeaderPrev">Prev Month</th>
+              <th colspan="4" class="group-2026" id="faHeader2026">2026</th>
               <th colspan="3" class="group-ratios">Ratios</th>
               <th colspan="3" class="group-waste">Wastage</th>
             </tr>
@@ -3766,8 +3766,21 @@ ${clone.outerHTML}
     if (!data || !data.length) return;
     
     const ctx = getMonthContext();
-    document.querySelectorAll('#tabFormatAm .group-prev').forEach(el => {
-      if (el.tagName === 'TH') el.textContent = `PREV (${MONTHS[ctx.prevM-1]} ${ctx.prevY})`;
+    const curMonthName = MONTHS[ctx.curM - 1];
+    const curYearStr = ctx.curY;
+    const prevMonthName = MONTHS[ctx.prevM - 1];
+    const prevYearStr = ctx.prevY;
+    const lastYearStr = curYearStr - 1; // e.g., 2025
+
+    // Update the Top Group Headers dynamically
+    document.querySelectorAll('#tabFormatAm .fa-header-2025').forEach(el => {
+      el.textContent = `${lastYearStr} (${curMonthName})`;
+    });
+    document.querySelectorAll('#tabFormatAm .fa-header-2026').forEach(el => {
+      el.textContent = `${curYearStr} (${curMonthName})`;
+    });
+    document.querySelectorAll('#tabFormatAm .fa-header-prev').forEach(el => {
+      el.textContent = `PREV (${prevMonthName} ${prevYearStr})`;
     });
 
     buildFormatAmTable(data, 'segment', 'faSegmentBody');

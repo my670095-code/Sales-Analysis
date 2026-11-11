@@ -7,6 +7,7 @@
   <meta name="description" content="Enterprise-grade Sales Intelligence Platform">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     :root {
@@ -788,7 +789,6 @@
         <div class="table-controls">
         <button class="toggle-btn lfl-toggle" id="lflToggle"><i class="fas fa-filter"></i> LFL Only</button>
         <button class="toggle-btn" id="newStoreToggle" style="color: #8b5cf6; border-color: #8b5cf6;"><i class="fas fa-star"></i> New Stores</button>
-                    <button class="toggle-btn" id="closedStoreToggle" style="color: var(--danger); border-color: var(--danger);"><i class="fas fa-store-slash"></i> Closed Stores</button>
           <button class="toggle-btn" id="adsToggle"><i class="fas fa-calculator"></i> ADS</button>
           <button class="export-btn excel" id="exportExcel"><i class="fas fa-file-excel"></i> Export Excel</button>
           <button class="export-btn pdf" id="exportPdf"><i class="fas fa-file-pdf"></i> Export PDF</button>
@@ -1569,8 +1569,9 @@ function getMaxDayForMonth(targetYear, targetMonth) {
   let rawData = [], filteredData = [];
   let topStoresChartInstance, areaChartInstance, monthlyTrendChartInstance, sparkTargetInst, sparkSalesInst, yoyChartInstance;
   let adsMode = false, lflOnly = false, newStoreOnly = false, currentSort = { key: null, dir: 'desc' };
-  let closedStoreOnly = false;
-let faLfl = false, faNew = false, faAds = false;
+  window.faLfl = false; 
+  window.faNew = false; 
+  window.faAds = false;
   
   const fileInput = $('fileInput'), uploadLabel = $('uploadLabel');
   const rowCountBadge = $('rowCountBadge');
@@ -2108,7 +2109,9 @@ let faLfl = false, faNew = false, faAds = false;
     newStoreOnly = false; $('newStoreToggle').classList.remove('active');
 
      // Reset Format/AM stacked toggles
-    faLfl = false; faNew = false; faAds = false;
+      window.faLfl = false; 
+    window.faNew = false; 
+    window.faAds = false;
     document.querySelectorAll('.fa-lfl-btn, .fa-new-btn, .fa-ads-btn').forEach(b => b.classList.remove('active'));
     currentSort = { key: null, dir: 'desc' };
     globalSearchTerm = ''; $('globalSearch').value = '';
@@ -2130,16 +2133,7 @@ $('newStoreToggle').addEventListener('click', () => {
   if(newStoreOnly && lflOnly) { lflOnly = false; $('lflToggle').classList.remove('active'); }
   applyFiltersAndRender(); 
 });
-    $('closedStoreToggle').addEventListener('click', () => { 
-    closedStoreOnly = !closedStoreOnly; 
-    $('closedStoreToggle').classList.toggle('active', closedStoreOnly); 
-    // Ensure LFL and New store filters turn off if Closed is turned on
-    if(closedStoreOnly) { 
-      lflOnly = false; $('lflToggle').classList.remove('active'); 
-      newStoreOnly = false; $('newStoreToggle').classList.remove('active'); 
-    }
-    applyFiltersAndRender(); 
-  });
+
   dayFrom.addEventListener('change', () => applyFiltersAndRender());
   dayTo.addEventListener('change', () => applyFiltersAndRender());
     $('wastageInput').addEventListener('change', e => {
@@ -3166,39 +3160,11 @@ function renderTable(data) {
       return currentSort.dir === 'asc' ? va - vb : vb - va;
     });
   } else rows.sort((a, b) => b.net2026 - a.net2026);
-   if (lflOnly) {
+     if (lflOnly) {
     rows = rows.filter(g => g.net2025 > 0);
   } else if (newStoreOnly) {
     const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
     rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
-  } else if (closedStoreOnly) {
-    // Show ONLY stores that are marked as CLOSED in the mapping, 
-    // adding them even if they have no sales data in the selected month.
-    const closedStores = Object.keys(STORE_MAPPING).filter(code => STORE_MAPPING[code].status === 'CLOSED');
-    
-    // 1. Filter out any open stores that might be in the current rows
-    rows = rows.filter(g => closedStores.includes(g.storeCode));
-    
-    // 2. Add any closed stores that are missing from the rows (zero sales)
-    const existingCodes = new Set(rows.map(r => r.storeCode));
-    const ctx = getMonthContext();
-    
-    closedStores.forEach(code => {
-      if (!existingCodes.has(code)) {
-        const mapInfo = STORE_MAPPING[code];
-        rows.push({
-          store: `Closed Store ${code}`,
-          storeCode: code,
-          area: 'N/A',
-          segment: mapInfo.segment,
-          format: mapInfo.format,
-          month: ctx.curM,
-          monthLabel: MONTHS[ctx.curM - 1],
-          target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0,
-          days2025: 0, days2026: 0
-        });
-      }
-    });
   }
 
   const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
@@ -3317,371 +3283,12 @@ if (wLookup) {
     tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
   });
 }
-  function renderTable(data) {
-  const tm = window.__targetMaps || buildTargetMap(rawData);
-  const sY = window.__salesYear;
 
-  // Build wastage map ONCE, before the loop
-  const wIdx = typeof getFilteredWastage === 'function' ? buildWastageIndex(getFilteredWastage(), data) : [];
-  const wMap = new Map();
-  wIdx.forEach(w => wMap.set(`${w.storeCode}||${w.month}`, w));
-
-  const gMap = new Map();
-  
-  // FIX: Strictly filter the rows to only show the months currently selected in the filter
-  const selM = [...FilterState.month.selected].map(Number);
-  const activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
-
-  activeRows.forEach(r => {
-    const k = `${r.storeCode}||${r.area}||${r.month}`;
-    if (!gMap.has(k)) gMap.set(k, {
-      store: r.store,
-      storeCode: r.storeCode,
-      area: r.area,
-      segment: r.segment,
-      format: r.format,
-      month: r.month,
-      monthLabel: r.monthLabel,
-      target: 0,
-      targetLoaded: false,
-      net2025: 0,
-      orders2025: 0,
-      net2026: 0,
-      orders2026: 0,
-      days2025Set: new Set(),
-      days2026Set: new Set()
-    });
-    const g = gMap.get(k);
-    if (!g.targetLoaded) {
-      const tY = sY != null ? sY : r.year;
-      const gi = computeGroupTarget(tm, data, data, r.storeCode, r.area, tY, r.month, false);
-      g.target = gi.target;
-      g.targetLoaded = true;
-    }
-    if (r.year === 2025) { g.net2025 += r.net; g.orders2025 += r.orders; if (r.net > 0 && r.day != null) g.days2025Set.add(r.day); }
-    else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
-  });
-
-  const ctx = getMonthContext();
-  const prevLbl = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
-  const h25 = $('groupHeader2025'); if (h25) h25.textContent = '2025';
-  const hp = $('groupHeaderPrev'); if (hp) hp.textContent = prevLbl;
-  const h26 = $('groupHeader2026'); if (h26) h26.textContent = '2026';
-
-  const sS = [...FilterState.store.selected], sA = [...FilterState.area.selected];
-  const tS = FilterState.store.options.length, tA = FilterState.area.options.length;
-  const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
-
-  const prevMap = new Map();
-  const prevDaySets = new Map();
-  rawData.forEach(r => {
-    if (r.year !== ctx.prevY || r.month !== ctx.prevM) return;
-    if (sS.length && sS.length !== tS && !sS.includes(r.storeCode)) return;
-    if (sA.length && sA.length !== tA && !sA.includes(r.area)) return;
-    if (dF != null && r.day != null && r.day < dF) return;
-    if (dT != null && r.day != null && r.day > dT) return;
-    const k = `${r.storeCode}||${r.area}`;
-    const cur = prevMap.get(k) || { net: 0, orders: 0, activeDays: 0 };
-    cur.net += r.net; cur.orders += r.orders;
-    prevMap.set(k, cur);
-    if (r.net > 0 && r.day != null) {
-      if (!prevDaySets.has(k)) prevDaySets.set(k, new Set());
-      prevDaySets.get(k).add(r.day);
-    }
-  });
-  prevMap.forEach((v, k) => {
-    const s = prevDaySets.get(k);
-    v.activeDays = s ? s.size : 0;
-  });
-  
-  let rows = [...gMap.values()].map(g => ({
-    ...g,
-    days2025: g.days2025Set.size,
-    days2026: g.days2026Set.size
-  }));
-  const rankMap = new Map();
-  [...rows].sort((a, b) => b.net2026 - a.net2026).slice(0, 3).forEach((r, i) => rankMap.set(r.storeCode, i + 1));
-
-  if (currentSort.key) {
-    rows.sort((a, b) => {
-      let va, vb;
-      switch (currentSort.key) {
-        case 'store': va = a.store; vb = b.store; break;
-        case 'manager': va = a.area; vb = b.area; break;
-        case 'segment': va = a.segment; vb = b.segment; break;
-        case 'format': va = a.format; vb = b.format; break;
-        case 'month': va = a.month; vb = b.month; break;
-        case 'target': va = a.target; vb = b.target; break;
-        case 'net2025': va = a.net2025; vb = b.net2025; break;
-        case 'net2026': va = a.net2026; vb = b.net2026; break;
-        case 'days2025': va = a.days2025; vb = b.days2025; break;
-        case 'days2026': va = a.days2026; vb = b.days2026; break;
-        case 'lfl': va = a.net2025 > 0 ? a.net2026 / a.net2025 : 0; vb = b.net2025 > 0 ? b.net2026 / b.net2025 : 0; break;
-        case 'tgt': va = a.target > 0 ? a.net2026 / a.target : 0; vb = b.target > 0 ? b.net2026 / b.target : 0; break;
-      }
-      if (typeof va === 'string') return currentSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-      return currentSort.dir === 'asc' ? va - vb : vb - va;
-    });
-  } else rows.sort((a, b) => b.net2026 - a.net2026);
-  
-  if (lflOnly) {
-    rows = rows.filter(g => g.net2025 > 0);
-  } else if (newStoreOnly) {
-    const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
-    rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
-  } else if (closedStoreOnly) {
-    rows = rows.filter(g => {
-      const mapInfo = STORE_MAPPING[g.storeCode] || {};
-      return mapInfo.status === 'CLOSED';
-    });
-  }
-
-  const st = { target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0, wasteCost: 0, wasteQty: 0 };
-  let html = '';
-  
-  rows.forEach(g => {
-    const rawAt25 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
-    const rawAt26 = g.orders2026 > 0 ? g.net2026 / g.orders2026 : 0;
-    let dN25, dO25, dA25, dN26, dO26, dA26, dT;
-    if (adsMode) { 
-      const dy25 = g.days2025 > 0 ? g.days2025 : 1, dy26 = g.days2026 > 0 ? g.days2026 : 1; 
-      dN25 = g.net2025 / dy25; dO25 = g.orders2025 / dy25; dA25 = rawAt25; 
-      dN26 = g.net2026 / dy26; dO26 = g.orders2026 / dy26; dA26 = rawAt26; 
-      dT = g.target / (g.days2026 > 0 ? g.days2026 : 1); 
-    } else { 
-      dN25 = g.net2025; dO25 = g.orders2025; dA25 = rawAt25; 
-      dN26 = g.net2026; dO26 = g.orders2026; dA26 = rawAt26; 
-      dT = g.target; 
-    }
-    
-    st.target += g.target; st.net2025 += g.net2025; st.orders2025 += g.orders2025; st.net2026 += g.net2026; st.orders2026 += g.orders2026;
-    const wLookup = wMap.get(`${g.storeCode}||${g.month}`);
-    if (wLookup) {
-      st.wasteCost += wLookup.wastageCost || 0;
-      st.wasteQty += wLookup.wastageQty || 0;
-    }
-    
-    const p = prevMap.get(`${g.storeCode}||${g.area}`) || { net: 0, orders: 0, activeDays: 0 };
-    const prevAt = p.orders > 0 ? p.net / p.orders : 0;
-    let dpN = p.net, dpO = p.orders;
-    if (adsMode) { const pd = p.activeDays > 0 ? p.activeDays : 1; dpN = p.net / pd; dpO = p.orders / pd; }
-    
-    let cls = '';
-    if (g.net2025 > 0 || g.net2026 > 0) cls = g.net2026 >= g.net2025 ? 'cell-positive' : 'cell-negative';
-    const lflF = fmtSignedPct(g.net2025 > 0 ? (g.net2026 / g.net2025) : NaN);
-    const tgtF = fmtSignedPct(g.target > 0 ? (g.net2026 / g.target) : NaN);
-    const momF = fmtSignedPct(p.net > 0 ? (g.net2026 / p.net) : NaN);
-    
-    let sName = g.store;
-    const pfx = new RegExp(`^\\s*${g.storeCode}\\s*-\\s*`);
-    if (pfx.test(sName)) sName = sName.replace(pfx, `${g.storeCode} - `);
-    else if (!sName.startsWith(g.storeCode)) sName = `${g.storeCode} - ${g.store}`;
-    
-    const rank = rankMap.get(g.storeCode);
-    let rankHtml = '';
-    if (rank === 1) rankHtml = '<span class="rank-badge rank-1">1</span>';
-    else if (rank === 2) rankHtml = '<span class="rank-badge rank-2">2</span>';
-    else if (rank === 3) rankHtml = '<span class="rank-badge rank-3">3</span>';
-    const missed = g.target > 0 && g.net2026 < g.target;
-    const rowCls = `store-clickable ${missed ? 'missed-target' : ''}`;
-
-    // Wastage lookup
-    const w = wMap.get(`${g.storeCode}||${g.month}`);
-    const wCost = w ? fmtCur(w.wastageCost) : '—';
-    const wQty = w ? fmtNum(w.wastageQty) : '—';
-    const wPct = w && w.wastagePct != null ? (w.wastagePct * 100).toFixed(2) + '%' : '—';
-    const wCls = w && w.wastagePct != null ? (w.wastagePct > 0.05 ? 'cell-negative' : '') : '';
-
-    html += `<tr class="${rowCls}" data-store-code="${escapeAttr(g.storeCode)}" data-store-area="${escapeAttr(g.area)}">
-      <td class="left-cell col-store"><strong>${rankHtml}${escapeHtml(sName)}</strong></td>
-      <td class="left-cell col-manager">${escapeHtml(g.area)}</td>
-      <td class="left-cell col-manager">${escapeHtml(g.segment || '—')}</td>
-      <td class="left-cell col-manager">${escapeHtml(g.format || '—')}</td>
-      <td>${g.monthLabel || '—'}</td>
-      <td>${g.target > 0 ? fmtCur(dT) : '—'}</td>
-      <td class="cell-2025">${g.days2025 || 0}</td>
-      <td class="cell-2025">${fmtCur(dN25)}</td>
-      <td class="cell-2025">${fmtNum(dO25)}</td>
-      <td class="cell-2025">${fmtAT(dA25)}</td>
-      <td class="cell-prev">${p.activeDays || 0}</td>
-      <td class="cell-prev">${fmtCur(dpN)}</td>
-      <td class="cell-prev">${fmtNum(dpO)}</td>
-      <td class="cell-prev">${fmtAT(prevAt)}</td>
-      <td class="cell-2026 ${cls}">${g.days2026 || 0}</td>
-      <td class="cell-2026 ${cls}">${fmtCur(dN26)}</td>
-      <td class="cell-2026 ${cls}">${fmtNum(dO26)}</td>
-      <td class="cell-2026 ${cls}">${fmtAT(dA26)}</td>
-      <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
-      <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
-      <td class="cell-ratios ${momF.cls}">${momF.text}</td>
-      <td class="cell-waste ${wCls}">${wCost}</td>
-      <td class="cell-waste ${wCls}">${wPct}</td>
-      <td class="cell-waste">${wQty}</td>
-    </tr>`;
-  });
-
-  if (rows.length) {
-    let c25 = 0, c26 = 0, cp = 0, td25 = 0, td26 = 0, tdp = 0;
-    rows.forEach(g => { if (g.days2025 > 0) { td25 += g.days2025; c25++; } if (g.days2026 > 0) { td26 += g.days2026; c26++; } const p = prevMap.get(`${g.storeCode}||${g.area}`) || { activeDays: 0 }; if (p.activeDays > 0) { tdp += p.activeDays; cp++; } });
-    const avg25 = c25 > 0 ? td25 / c25 : 0, avg26 = c26 > 0 ? td26 / c26 : 0, avgp = cp > 0 ? tdp / cp : 0;
-    const stAt25 = st.orders2025 > 0 ? st.net2025 / st.orders2025 : 0;
-    const stAt26 = st.orders2026 > 0 ? st.net2026 / st.orders2026 : 0;
-    let sDN25 = st.net2025, sDO25 = st.orders2025, sDN26 = st.net2026, sDO26 = st.orders2026, sDpN = 0, sDpO = 0, sDT = st.target;
-    let stPrevNet = 0, stPrevOrders = 0;
-    rows.forEach(g => { const p = prevMap.get(`${g.storeCode}||${g.area}`) || { net: 0, orders: 0 }; stPrevNet += p.net; stPrevOrders += p.orders; });
-    sDpN = stPrevNet; sDpO = stPrevOrders;
-    if (adsMode) { sDN25 = st.net2025 / (td25 || 1); sDO25 = st.orders2025 / (td25 || 1); sDN26 = st.net2026 / (td26 || 1); sDO26 = st.orders2026 / (td26 || 1); sDpN = stPrevNet / (tdp || 1); sDpO = stPrevOrders / (tdp || 1); sDT = st.target / (td26 || 1); }
-    const stLfl = fmtSignedPct(sDN25 > 0 ? (sDN26 / sDN25) : NaN);
-    const stTgt = fmtSignedPct(sDT > 0 ? (sDN26 / sDT) : NaN);
-    const stMom = fmtSignedPct(sDpN > 0 ? (sDN26 / sDpN) : NaN);
-    let stCls = '';
-    if (sDN25 > 0 || sDN26 > 0) stCls = sDN26 >= sDN25 ? 'cell-positive' : 'cell-negative';
-    const stPct = st.net2026 > 0 ? (st.wasteCost / st.net2026) : 0;
-     html += `<tr class="subtotal-row">
-      <td colspan="6" class="left-cell">Subtotal (${rows.length} rows)</td>
-      <td class="cell-2025">${Math.round(avg25)}</td>
-      <td class="cell-2025">${fmtCur(sDN25)}</td>
-      <td class="cell-2025">${fmtNum(sDO25)}</td>
-      <td class="cell-2025">${fmtAT(stAt25)}</td>
-      <td class="cell-prev">${Math.round(avgp)}</td>
-      <td class="cell-prev">${fmtCur(sDpN)}</td>
-      <td class="cell-prev">${fmtNum(sDpO)}</td>
-      <td class="cell-prev">${fmtAT(stPrevOrders > 0 ? stPrevNet / stPrevOrders : 0)}</td>
-      <td class="cell-2026 ${stCls}">${Math.round(avg26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td>
-      <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
-      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
-      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
-      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-      <td class="cell-waste">${st.wasteCost > 0 ? fmtCur(st.wasteCost) : '—'}</td>
-      <td class="cell-waste">${st.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
-      <td class="cell-waste">${st.wasteQty > 0 ? fmtNum(st.wasteQty) : '—'}</td>
-    </tr>`;
-  }
-  if (!rows.length) html = '<tr><td colspan="24" style="text-align:center;padding:30px;color:var(--text-light);">No data matches filters.</td></tr>';
-  
-  $('tableBody').innerHTML = html;
-  
-  $('tableBody').querySelectorAll('tr.store-clickable').forEach(tr => {
-    tr.addEventListener('click', () => window.openStoreDayModal(tr.dataset.storeCode, tr.dataset.storeArea));
-  });
-}
   // ===== MODAL =====
   const storeDayModal = $('storeDayModal');
   const modalStoreName = $('modalStoreName'), modalStoreSub = $('modalStoreSub');
   const modalDayBody = $('modalDayBody'), modalHeaderPrev = $('modalHeaderPrev');
   const modalCloseBtn = $('modalCloseBtn');
-
-  function openStoreDayModal(storeCode, area) {
-    const tm = window.__targetMaps || buildTargetMap(rawData);
-    const ctx = getMonthContext();
-    const prevLbl = `${MONTHS[ctx.prevM-1]} ${ctx.prevY}`;
-    modalHeaderPrev.textContent = prevLbl;
-    const sample = rawData.find(r => r.storeCode === storeCode && r.area === area) || rawData.find(r => r.storeCode === storeCode);
-    if (!sample) return;
-    let sName = sample.store;
-    const pfx = new RegExp(`^\\s*${storeCode}\\s*-\\s*`);
-    if (pfx.test(sName)) sName = sName.replace(pfx, `${storeCode} - `);
-    else if (!sName.startsWith(storeCode)) sName = `${storeCode} - ${sName}`;
-    modalStoreName.textContent = sName;
-        modalStoreSub.textContent = `Manager: ${area} • Day-wise breakdown`;
-
-    window.__modalDow = window.__modalDow || new Set();
-    const modalDowSet = window.__modalDow;
-    const dowAllowed = d => modalDowSet.size === 0 || modalDowSet.has(d.getDay());
-
-    const dMap = new Map();
-    const ensure = d => { if (!dMap.has(d)) dMap.set(d, { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0 }); return dMap.get(d); };
-        filteredData.forEach(r => {
-      if (r.storeCode !== storeCode) return;
-      if (area && r.area !== area) return;
-      if (r.day == null || r.month !== ctx.curM) return;
-      if (!r.dob || !dowAllowed(r.dob)) return;
-      if (r.year === 2025) { const b = ensure(r.day); b.d2025 += r.net; b.o2025 += r.orders; }
-      else if (r.year === ctx.curY) { const b = ensure(r.day); b.d2026 += r.net; b.o2026 += r.orders; }
-    });
-        rawData.forEach(r => {
-      if (r.storeCode !== storeCode) return;
-      if (area && r.area !== area) return;
-      if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
-      if (!r.dob || !dowAllowed(r.dob)) return;
-      const dF = dayFrom.value ? parseInt(dayFrom.value) : null, dT = dayTo.value ? parseInt(dayTo.value) : null;
-      if (dF != null && r.day < dF) return;
-      if (dT != null && r.day > dT) return;
-      const b = ensure(r.day); b.dPrev += r.net; b.oPrev += r.orders;
-    });
-    const sY = window.__salesYear != null ? window.__salesYear : ctx.curY;
-    const gi = computeGroupTarget(tm, filteredData, filteredData, storeCode, area, sY, ctx.curM, false);
-    const isClosed = WEEKEND_CLOSED.has(String(storeCode));
-    const dim = daysInMonth(sY, ctx.curM);
-    let vDays = 0;
-    for (let d = 1; d <= dim; d++) { const dt = new Date(sY, ctx.curM - 1, d); const dow = dt.getDay(); if (!isClosed || (dow !== 5 && dow !== 6)) vDays++; }
-    const perDayT = vDays > 0 ? gi.fullMonth / vDays : 0;
-
-    const allD = [...dMap.keys()].sort((a, b) => a - b);
-    if (!allD.length) { modalDayBody.innerHTML = '<tr><td colspan="13" class="modal-empty">No data</td></tr>'; storeDayModal.classList.add('open'); return; }
-    const minD = allD[0], maxD = allD[allD.length - 1];
-    const tot = { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0 };
-    let html = '';
-    for (let d = minD; d <= maxD; d++) {
-      const b = dMap.get(d) || { d2025: 0, o2025: 0, dPrev: 0, oPrev: 0, d2026: 0, o2026: 0 };
-      const at25 = b.o2025 > 0 ? b.d2025 / b.o2025 : 0, atP = b.oPrev > 0 ? b.dPrev / b.oPrev : 0, at26 = b.o2026 > 0 ? b.d2026 / b.o2026 : 0;
-      tot.d2025 += b.d2025; tot.o2025 += b.o2025; tot.dPrev += b.dPrev; tot.oPrev += b.oPrev; tot.d2026 += b.d2026; tot.o2026 += b.o2026;
-      const lflF = fmtSignedPct(b.d2025 > 0 ? (b.d2026 / b.d2025) : NaN);
-      const tgtF = fmtSignedPct(perDayT > 0 ? (b.d2026 / perDayT) : NaN);
-      const momF = fmtSignedPct(b.dPrev > 0 ? (b.d2026 / b.dPrev) : NaN);
-      const cellCls = (b.d2025 > 0 || b.d2026 > 0) ? (b.d2026 >= b.d2025 ? 'cell-positive' : 'cell-negative') : '';
-      html += `<tr>
-        <td>Day ${d}</td>
-        <td class="cell-2025">${fmtCur(b.d2025)}</td>
-        <td class="cell-2025">${fmtNum(b.o2025)}</td>
-        <td class="cell-2025">${fmtAT(at25)}</td>
-        <td class="cell-prev">${fmtCur(b.dPrev)}</td>
-        <td class="cell-prev">${fmtNum(b.oPrev)}</td>
-        <td class="cell-prev">${fmtAT(atP)}</td>
-        <td class="cell-2026 ${cellCls}">${fmtCur(b.d2026)}</td>
-        <td class="cell-2026 ${cellCls}">${fmtNum(b.o2026)}</td>
-        <td class="cell-2026 ${cellCls}">${fmtAT(at26)}</td>
-        <td class="cell-ratios ${lflF.cls}">${lflF.text}</td>
-        <td class="cell-ratios ${tgtF.cls}">${tgtF.text}</td>
-        <td class="cell-ratios ${momF.cls}">${momF.text}</td>
-      </tr>`;
-    }
-    const stAt25 = tot.o2025 > 0 ? tot.d2025 / tot.o2025 : 0, stAtP = tot.oPrev > 0 ? tot.dPrev / tot.oPrev : 0, stAt26 = tot.o2026 > 0 ? tot.d2026 / tot.o2026 : 0;
-    const stLfl = fmtSignedPct(tot.d2025 > 0 ? (tot.d2026 / tot.d2025) : NaN);
-    const stTgt = fmtSignedPct(gi.target > 0 ? (tot.d2026 / gi.target) : NaN);
-    const stMom = fmtSignedPct(tot.dPrev > 0 ? (tot.d2026 / tot.dPrev) : NaN);
-    const stCls = (tot.d2025 > 0 || tot.d2026 > 0) ? (tot.d2026 >= tot.d2025 ? 'cell-positive' : 'cell-negative') : '';
-    html += `<tr class="subtotal-row">
-      <td>TOTAL</td>
-      <td class="cell-2025">${fmtCur(tot.d2025)}</td>
-      <td class="cell-2025">${fmtNum(tot.o2025)}</td>
-      <td class="cell-2025">${fmtAT(stAt25)}</td>
-      <td class="cell-prev">${fmtCur(tot.dPrev)}</td>
-      <td class="cell-prev">${fmtNum(tot.oPrev)}</td>
-      <td class="cell-prev">${fmtAT(stAtP)}</td>
-      <td class="cell-2026 ${stCls}">${fmtCur(tot.d2026)}</td>
-      <td class="cell-2026 ${stCls}">${fmtNum(tot.o2026)}</td>
-      <td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
-      <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td>
-      <td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td>
-      <td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
-    </tr>`;
-       modalDayBody.innerHTML = html;
-      storeDayModal.classList.add('open');
-    if (typeof resetChartMetricToggles === 'function') resetChartMetricToggles();
-    document.querySelectorAll('#modalDowBar .dow-pill').forEach(btn => {
-      const v = btn.dataset.modalDow;
-      const isActive = v === 'all' ? modalDowSet.size === 0 : modalDowSet.has(Number(v));
-      btn.classList.toggle('active', isActive);
-      btn.onclick = () => {
-        if (v === 'all') modalDowSet.clear();
-        else { const n = Number(v); if (modalDowSet.has(n)) modalDowSet.delete(n); else modalDowSet.add(n); }
-        openStoreDayModal(storeCode, area);
-      };
-    });
-  }
 
   $('modalExportExcel').addEventListener('click', () => {
     const t = document.getElementById('modalDayTable');
@@ -3856,8 +3463,6 @@ ${clone.outerHTML}
     showToast(`📊 ${raw.length} rows · ${stores} stores · ${managers} managers · ${missing} missing targets · ${skipped} skipped`, 'info');
   });
    // ===== FORMAT / AM VIEW (STACKED) =====
-
-
   function buildFormatAmTable(data, groupBy, tbodyId) {
     if (!data || !data.length) return;
     const tm = window.__targetMaps || buildTargetMap(rawData);
@@ -3872,7 +3477,30 @@ ${clone.outerHTML}
     };
 
     const selM = [...FilterState.month.selected].map(Number);
-    const activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
+    const dF = dayFrom.value ? parseInt(dayFrom.value) : null;
+    const dT = dayTo.value ? parseInt(dayTo.value) : null;
+
+    // --- 1. Identify LFL vs New Stores (Strictly using filtered 2025 data) ---
+    const storesWith2025Sales = new Set();
+    rawData.forEach(r => {
+      if (r.year === 2025) {
+        if (selM.length && !selM.includes(r.month)) return;
+        if (dF !== null && r.day !== null && r.day < dF) return;
+        if (dT !== null && r.day !== null && r.day > dT) return;
+        if (r.net > 0) storesWith2025Sales.add(r.storeCode);
+      }
+    });
+    const isLFLStore = (code) => storesWith2025Sales.has(code);
+    // ------------------------------------------------------------------------
+
+    // --- 2. Filter Rows BEFORE Aggregating ---
+    let activeRows = selM.length ? data.filter(r => selM.includes(r.month)) : data;
+    if (window.faLfl) {
+      activeRows = activeRows.filter(r => isLFLStore(r.storeCode));
+    } else if (window.faNew) {
+      activeRows = activeRows.filter(r => !isLFLStore(r.storeCode));
+    }
+    // -----------------------------------------
 
     const gMap = new Map();
     activeRows.forEach(r => {
@@ -3902,37 +3530,47 @@ ${clone.outerHTML}
       else if (r.year === 2026) { g.net2026 += r.net; g.orders2026 += r.orders; if (r.net > 0 && r.day != null) g.days2026Set.add(r.day); }
     });
 
-    // Prev Month (Honoring Day filters)
+    // --- 3. Apply Prev Month ---
     const pS = FilterState.store.selected, tS_ = FilterState.store.options.length;
     const pA = FilterState.area.selected,  tA_ = FilterState.area.options.length;
     const dF_prev = dayFrom.value ? parseInt(dayFrom.value) : null;
     const dT_prev = dayTo.value ? parseInt(dayTo.value) : null;
+
     rawData.forEach(r => {
       if (r.year !== ctx.prevY || r.month !== ctx.prevM || r.day == null) return;
       if (pS.size && pS.size !== tS_ && !pS.has(r.storeCode)) return;
       if (pA.size && pA.size !== tA_ && !pA.has(r.area)) return;
       if (dF_prev !== null && r.day < dF_prev) return;
       if (dT_prev !== null && r.day > dT_prev) return;
+
+      if (window.faLfl && !isLFLStore(r.storeCode)) return;
+      if (window.faNew && isLFLStore(r.storeCode)) return;
+
       const g = gMap.get(keyOf(r)); if (!g) return;
       g.netPrev += r.net; g.ordersPrev += r.orders;
       if (r.net > 0) g.daysPrevSet.add(r.day);
     });
 
-    // Wastage
+    // --- 4. Apply Wastage ---
     try {
       if (typeof getFilteredWastage === 'function' && typeof buildWastageIndex === 'function') {
         const wIdx = buildWastageIndex(getFilteredWastage(), data);
         const storeCodeToRow = new Map();
         data.forEach(r => { if (!storeCodeToRow.has(r.storeCode)) storeCodeToRow.set(r.storeCode, r); });
+        
         wIdx.forEach(w => {
           const r = storeCodeToRow.get(w.storeCode);
           if (!r) return;
+          
+          if (window.faLfl && !isLFLStore(r.storeCode)) return;
+          if (window.faNew && isLFLStore(r.storeCode)) return;
+
           const g = gMap.get(keyOf(r)); if (!g) return;
           g.wasteCost += w.wastageCost || 0;
           g.wasteQty  += w.wastageQty  || 0;
         });
       }
-    } catch(e) {}
+    } catch(e) { console.error("Wastage map error:", e); }
 
     let rows = [...gMap.values()].map(g => ({
       ...g,
@@ -3946,34 +3584,36 @@ ${clone.outerHTML}
       wastePct: g.net2026 > 0 ? g.wasteCost / g.net2026 : null
     }));
 
-    if (faLfl) rows = rows.filter(r => r.net2025 > 0);
-    else if (faNew) {
-      const storesWith2025 = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
-      rows = rows.filter(r => [...r.stores].every(sc => !storesWith2025.has(sc)));
-    }
-
+    rows = rows.filter(r => r.net2025 > 0 || r.net2026 > 0 || r.netPrev > 0 || r.wasteCost > 0);
     rows.sort((a, b) => b.net2026 - a.net2026);
 
-    const tot = { target:0, net2025:0, orders2025:0, days2025:0, netPrev:0, ordersPrev:0, daysPrev:0, net2026:0, orders2026:0, days2026:0, wasteCost:0, wasteQty:0 };
+    const tot = { target:0, net2025:0, orders2025:0, netPrev:0, ordersPrev:0, net2026:0, orders2026:0, wasteCost:0, wasteQty:0, totalStores: 0 };
+    let c25 = 0, c26 = 0, cp = 0, td25 = 0, td26 = 0, tdp = 0;
     let html = '';
     
     rows.forEach(g => {
       tot.target += g.target;
-      tot.net2025 += g.net2025; tot.orders2025 += g.orders2025; tot.days2025 += g.days2025;
-      tot.netPrev += g.netPrev; tot.ordersPrev += g.ordersPrev; tot.daysPrev += g.daysPrev;
-      tot.net2026 += g.net2026; tot.orders2026 += g.orders2026; tot.days2026 += g.days2026;
+      tot.net2025 += g.net2025; tot.orders2025 += g.orders2025;
+      tot.netPrev += g.netPrev; tot.ordersPrev += g.ordersPrev;
+      tot.net2026 += g.net2026; tot.orders2026 += g.orders2026;
       tot.wasteCost += g.wasteCost; tot.wasteQty += g.wasteQty;
+      tot.totalStores += g.storeCount;
+
+      if (g.days2025 > 0) { td25 += g.days2025; c25++; }
+      if (g.days2026 > 0) { td26 += g.days2026; c26++; }
+      if (g.daysPrev > 0) { tdp += g.daysPrev; cp++; }
 
       const at25 = g.orders2025 > 0 ? g.net2025 / g.orders2025 : 0;
       const atP  = g.ordersPrev > 0 ? g.netPrev  / g.ordersPrev  : 0;
       const at26 = g.orders2026 > 0 ? g.net2026 / g.orders2026 : 0;
 
-      const dN25 = faAds && g.days2025 > 0 ? g.net2025 / g.days2025 : g.net2025;
-      const dN26 = faAds && g.days2026 > 0 ? g.net2026 / g.days2026 : g.net2026;
-      const dNp  = faAds && g.daysPrev > 0 ? g.netPrev / g.daysPrev : g.netPrev;
-      const dO25 = faAds && g.days2025 > 0 ? g.orders2025 / g.days2025 : g.orders2025;
-      const dO26 = faAds && g.days2026 > 0 ? g.orders2026 / g.days2026 : g.orders2026;
-      const dOp  = faAds && g.daysPrev > 0 ? g.ordersPrev / g.daysPrev : g.ordersPrev;
+      const stores = g.storeCount > 0 ? g.storeCount : 1;
+      const dN25 = window.faAds && g.days2025 > 0 ? g.net2025 / g.days2025 / stores : g.net2025;
+      const dN26 = window.faAds && g.days2026 > 0 ? g.net2026 / g.days2026 / stores : g.net2026;
+      const dNp  = window.faAds && g.daysPrev > 0 ? g.netPrev / g.daysPrev / stores : g.netPrev;
+      const dO25 = window.faAds && g.days2025 > 0 ? g.orders2025 / g.days2025 / stores : g.orders2025;
+      const dO26 = window.faAds && g.days2026 > 0 ? g.orders2026 / g.days2026 / stores : g.orders2026;
+      const dOp  = window.faAds && g.daysPrev > 0 ? g.ordersPrev / g.daysPrev / stores : g.ordersPrev;
 
       const lflF = fmtSignedPct(g.lfl || NaN);
       const tgtF = fmtSignedPct(g.tgt || NaN);
@@ -4002,19 +3642,20 @@ ${clone.outerHTML}
     const stAtP  = tot.ordersPrev > 0 ? tot.netPrev  / tot.ordersPrev  : 0;
     const stAt26 = tot.orders2026 > 0 ? tot.net2026 / tot.orders2026 : 0;
 
-    const sDN25 = faAds && tot.days2025 > 0 ? tot.net2025 / tot.days2025 : tot.net2025;
-    const sDN26 = faAds && tot.days2026 > 0 ? tot.net2026 / tot.days2026 : tot.net2026;
-    const sDNp  = faAds && tot.daysPrev > 0 ? tot.netPrev / tot.daysPrev : tot.netPrev;
-    const sDO25 = faAds && tot.days2025 > 0 ? tot.orders2025 / tot.days2025 : tot.orders2025;
-    const sDO26 = faAds && tot.days2026 > 0 ? tot.orders2026 / tot.days2026 : tot.orders2026;
-    const sDOp  = faAds && tot.daysPrev > 0 ? tot.ordersPrev / tot.daysPrev : tot.ordersPrev;
+    const totS = tot.totalStores > 0 ? tot.totalStores : 1;
+    const sDN25 = window.faAds && td25 > 0 ? tot.net2025 / td25 / totS : tot.net2025;
+    const sDN26 = window.faAds && td26 > 0 ? tot.net2026 / td26 / totS : tot.net2026;
+    const sDNp  = window.faAds && tdp > 0 ? tot.netPrev / tdp / totS : tot.netPrev;
+    const sDO25 = window.faAds && td25 > 0 ? tot.orders2025 / td25 / totS : tot.orders2025;
+    const sDO26 = window.faAds && td26 > 0 ? tot.orders2026 / td26 / totS : tot.orders2026;
+    const sDOp  = window.faAds && tdp > 0 ? tot.ordersPrev / tdp / totS : tot.ordersPrev;
 
     if (rows.length) {
       html += `<tr class="subtotal-row">
         <td class="left-cell">TOTAL</td>
-        <td class="cell-2025">${tot.days2025}</td><td class="cell-2025">${fmtCur(sDN25)}</td><td class="cell-2025">${fmtNum(sDO25)}</td><td class="cell-2025">${fmtAT(stAt25)}</td>
-        <td class="cell-prev">${tot.daysPrev}</td><td class="cell-prev">${fmtCur(sDNp)}</td><td class="cell-prev">${fmtNum(sDOp)}</td><td class="cell-prev">${fmtAT(stAtP)}</td>
-        <td class="cell-2026 ${stCls}">${tot.days2026}</td><td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td><td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td><td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
+        <td class="cell-2025">${window.faAds ? Math.round(td25 / (c25 || 1)) : 0}</td><td class="cell-2025">${fmtCur(sDN25)}</td><td class="cell-2025">${fmtNum(sDO25)}</td><td class="cell-2025">${fmtAT(stAt25)}</td>
+        <td class="cell-prev">${window.faAds ? Math.round(tdp / (cp || 1)) : 0}</td><td class="cell-prev">${fmtCur(sDNp)}</td><td class="cell-prev">${fmtNum(sDOp)}</td><td class="cell-prev">${fmtAT(stAtP)}</td>
+        <td class="cell-2026 ${stCls}">${window.faAds ? Math.round(td26 / (c26 || 1)) : 0}</td><td class="cell-2026 ${stCls}">${fmtCur(sDN26)}</td><td class="cell-2026 ${stCls}">${fmtNum(sDO26)}</td><td class="cell-2026 ${stCls}">${fmtAT(stAt26)}</td>
         <td class="cell-ratios ${stLfl.cls}">${stLfl.text}</td><td class="cell-ratios ${stTgt.cls}">${stTgt.text}</td><td class="cell-ratios ${stMom.cls}">${stMom.text}</td>
         <td class="cell-waste">${tot.wasteCost > 0 ? fmtCur(tot.wasteCost) : '—'}</td>
         <td class="cell-waste">${tot.wasteCost > 0 ? (stPct * 100).toFixed(2) + '%' : '—'}</td>
@@ -4054,74 +3695,86 @@ ${clone.outerHTML}
   }
 
   // Direct event listeners attached to the document (works for dynamically added buttons)
+  // LFL, New Store, ADS toggle logic
   document.addEventListener('click', (e) => {
     if (e.target.closest('.fa-lfl-btn')) {
-      faLfl = !faLfl; 
-      document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.toggle('active', faLfl));
-      if (faLfl && faNew) { faNew = false; document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.remove('active')); }
+      window.faLfl = !window.faLfl; 
+      document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.toggle('active', window.faLfl));
+      if (window.faLfl && window.faNew) { 
+          window.faNew = false; 
+          document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.remove('active')); 
+      }
       if (window.__filteredData) renderFormatAm(window.__filteredData);
     }
     
     if (e.target.closest('.fa-new-btn')) {
-      faNew = !faNew; 
-      document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.toggle('active', faNew));
-      if (faNew && faLfl) { faLfl = false; document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.remove('active')); }
+      window.faNew = !window.faNew; 
+      document.querySelectorAll('.fa-new-btn').forEach(b => b.classList.toggle('active', window.faNew));
+      if (window.faNew && window.faLfl) { 
+          window.faLfl = false; 
+          document.querySelectorAll('.fa-lfl-btn').forEach(b => b.classList.remove('active')); 
+      }
       if (window.__filteredData) renderFormatAm(window.__filteredData);
     }
     
     if (e.target.closest('.fa-ads-btn')) {
-      faAds = !faAds; 
-      document.querySelectorAll('.fa-ads-btn').forEach(b => b.classList.toggle('active', faAds));
+      window.faAds = !window.faAds; 
+      document.querySelectorAll('.fa-ads-btn').forEach(b => b.classList.toggle('active', window.faAds));
       if (window.__filteredData) renderFormatAm(window.__filteredData);
     }
   });
 
-     document.querySelectorAll('.fa-export-excel').forEach(btn => {
+    document.querySelectorAll('.fa-export-excel').forEach(btn => {
       btn.addEventListener('click', () => {
-        const wb = XLSX.utils.book_new();
-        
+        const aoa = [];
+
         const tables = [
-          { id: 'faTableSegment', name: 'Segment' },
-          { id: 'faTableFormat', name: 'Format' },
-          { id: 'faTableAm', name: 'AM' }
+          { id: 'faTableSegment', title: 'Segment Performance' },
+          { id: 'faTableFormat', title: 'Format Performance' },
+          { id: 'faTableAm', title: 'AM Performance' }
         ];
 
-        tables.forEach(t => {
+        tables.forEach((t, index) => {
           const tableEl = document.getElementById(t.id);
           if (!tableEl) return;
 
-          const aoa = [];
-
-          // 1. Build the custom header (matching the visual layout exactly)
+          // Add Title
+          aoa.push([t.title]);
+          
+          // Add Headers
           aoa.push(['', '2025', '', '', '', 'PREV MONTH', '', '', '', '2026', '', '', '', 'RATIOS', '', '', 'WASTAGE', '', '']);
           aoa.push(['', 'DAYS', 'SALES', 'ADT', 'AT', 'DAYS', 'SALES', 'ADT', 'AT', 'DAYS', 'SALES', 'ADT', 'AT', 'LFL', 'TGT', 'MOM', 'WASTE', 'WASTE %', 'WASTE QTY']);
 
-          // 2. Build the data rows
+          // Add Data Rows
           tableEl.querySelectorAll('tbody tr').forEach(tr => {
             const row = [];
             tr.querySelectorAll('td').forEach(td => {
-              // Clean the text (remove commas, change em-dash to blank)
               const x = td.innerText.trim().replace(/,/g, '');
               row.push(x === '—' ? '' : x);
             });
-            // Ensure the row has exactly 19 columns (in case a sub-row is weirdly formatted)
             while (row.length < 19) row.push('');
             aoa.push(row);
           });
 
-          const ws = XLSX.utils.aoa_to_sheet(aoa);
-          
-          // Auto-size columns for readability
-          ws['!cols'] = [
-            {wch:20},{wch:6},{wch:10},{wch:8},{wch:6},
-            {wch:6},{wch:10},{wch:8},{wch:6},
-            {wch:6},{wch:10},{wch:8},{wch:6},
-            {wch:8},{wch:8},{wch:8},
-            {wch:10},{wch:8},{wch:10}
-          ];
-
-          XLSX.utils.book_append_sheet(wb, ws, t.name);
+          // Add spacing between tables (except for the last one)
+          if (index < tables.length - 1) {
+            aoa.push([]);
+            aoa.push([]);
+          }
         });
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        
+        ws['!cols'] = [
+          {wch:20},{wch:6},{wch:10},{wch:8},{wch:6},
+          {wch:6},{wch:10},{wch:8},{wch:6},
+          {wch:6},{wch:10},{wch:8},{wch:6},
+          {wch:8},{wch:8},{wch:8},
+          {wch:10},{wch:8},{wch:10}
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Format & AM');
 
         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -4130,67 +3783,90 @@ ${clone.outerHTML}
         a.href = url; a.download = `Format-AM_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast('All tables exported to Excel successfully', 'success');
+        showToast('All tables exported to one Excel sheet', 'success');
       });
     });
     document.querySelectorAll('.fa-export-pdf').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tableId = btn.dataset.table;
-        const tableContainer = document.getElementById(tableId)?.closest('.table-container');
-        if (!tableContainer) return;
+        const tables = [
+          { id: 'faTableSegment', title: 'Segment Performance' },
+          { id: 'faTableFormat', title: 'Format Performance' },
+          { id: 'faTableAm', title: 'AM Performance' }
+        ];
 
-        const clone = tableContainer.cloneNode(true);
-        // Remove buttons/controls from the PDF clone
-        const controls = clone.querySelector('.table-controls');
-        if (controls) controls.remove();
-        
-        const title = clone.querySelector('h3').innerText.trim();
+        const tempContainer = document.createElement('div');
+        tempContainer.style.padding = '10px';
+        tempContainer.style.background = '#ffffff';
+        tempContainer.style.width = '1050px'; // Slightly narrower to ensure it fits landscape width
 
-        const printHTML = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
-        <style>
-          @page { size: A4 landscape; margin: 5mm; }
-          body { font-family: 'Inter', system-ui, sans-serif; color:#0b1b33; background:#fff; margin:0; padding:0; }
-          h1 { font-size:16px; margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid #3b82f6; }
+        const titleEl = document.createElement('h1');
+        titleEl.innerText = `Format & AM Report · ${new Date().toLocaleString()}`;
+        titleEl.style.fontSize = '18px';
+        titleEl.style.marginBottom = '15px';
+        titleEl.style.borderBottom = '2px solid #3b82f6';
+        titleEl.style.paddingBottom = '8px';
+        titleEl.style.color = '#0b1b33';
+        tempContainer.appendChild(titleEl);
+
+        tables.forEach(t => {
+          const tableEl = document.getElementById(t.id);
+          if (!tableEl) return;
+
+          const h2 = document.createElement('h2');
+          h2.innerText = t.title;
+          h2.style.fontSize = '14px';
+          h2.style.margin = '15px 0 8px 0';
+          h2.style.color = '#1e293b';
+          tempContainer.appendChild(h2);
+
+          const clone = tableEl.cloneNode(true);
+          clone.style.width = '100%';
+          clone.style.borderCollapse = 'collapse';
+          clone.style.fontSize = '9px';
           
-          /* Scale the table down to fit all 19 columns */
-          table { 
-            width:100%; 
-            border-collapse:collapse; 
-            font-size:7px; 
-            transform: scale(0.85); 
-            transform-origin: top left;
-            width: 117%; /* Compensate for the scale */
+          clone.querySelectorAll('th').forEach(th => {
+            th.style.padding = '4px';
+            th.style.borderBottom = '1px solid #eef2f8';
+            th.style.textTransform = 'uppercase';
+            th.style.textAlign = 'right';
+            th.style.fontSize = '7px';
+            th.style.background = '#f8fafc';
+          });
+          clone.querySelectorAll('td').forEach(td => {
+            td.style.padding = '4px';
+            td.style.borderBottom = '1px solid #eef2f8';
+            td.style.textAlign = 'right';
+            td.style.whiteSpace = 'nowrap';
+          });
+          
+          tempContainer.appendChild(clone);
+
+          // --- PAGE BREAK LOGIC ---
+          // If we just added the Format table, create a break before the AM table
+          if (t.title === 'Format Performance') {
+            const pageBreak = document.createElement('div');
+            pageBreak.style.pageBreakAfter = 'always';
+            pageBreak.style.breakAfter = 'page';
+            pageBreak.style.height = '10px'; 
+            tempContainer.appendChild(pageBreak);
           }
-          
-          th, td { padding:2px 4px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
-          th:first-child, td:first-child { text-align:left; font-weight:bold; }
-          thead th { background:#f8fafc; font-size:6px; text-transform:uppercase; }
-          th.group-2025 { background:#eff6ff; color:#1d4ed8; }
-          th.group-prev { background:#fef9ee; color:#b45309; }
-          th.group-2026 { background:#f0fdf4; color:#15803d; }
-          th.group-ratios { background:#faf5ff; color:#7e22ce; }
-          th.group-waste { background:#fef2f2; color:#b91c1c; }
-          td.cell-2025 { background:#f8fbff; }
-          td.cell-prev { background:#fffdf4; }
-          td.cell-2026 { background:#f7fdf9; }
-          tr.subtotal-row td { background:#e8f0fe !important; font-weight:800 !important; border-top:1px solid #3b82f6 !important; }
-          .cell-positive, .pct-up { color:#15803d; }
-          .cell-negative, .pct-down { color:#b91c1c; }
-          tr { page-break-inside: avoid; break-inside: avoid; }
-          thead { display: table-header-group; }
-          
-          .toolbar { position:fixed; top:10px; right:10px; background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer; z-index:9999; }
-          @media print { .toolbar { display:none; } }
-        </style></head><body>
-        <button class="toolbar" onclick="window.print()">Save as PDF</button>
-        <h1>${title} · ${new Date().toLocaleString()}</h1>
-        ${clone.outerHTML}
-        </body></html>`;
-        
-        const w = window.open('', '_blank');
-        if (!w) { showToast('Popup blocked', 'error'); return; }
-        w.document.open(); w.document.write(printHTML); w.document.close();
-        showToast('PDF preview opened', 'success');
+        });
+
+        const opt = {
+          margin:       [5, 5, 5, 5], 
+          filename:     `Format-AM_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 1.5, useCORS: true, scrollY: 0 }, // Scale 1.5 is high-res but prevents overflow
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+          pagebreak:    { mode: ['css', 'legacy'] } // Forces html2pdf to respect the page break div
+        };
+
+        html2pdf().set(opt).from(tempContainer).save().then(() => {
+          showToast('PDF Downloaded Successfully', 'success');
+        }).catch(err => {
+          console.error(err);
+          showToast('Failed to generate PDF', 'error');
+        });
       });
     });
 

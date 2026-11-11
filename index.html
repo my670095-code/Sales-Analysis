@@ -3179,10 +3179,32 @@ function renderTable(data) {
     const storesWith2025Sales = new Set(data.filter(r => r.year === 2025 && r.net > 0).map(r => r.storeCode));
     rows = rows.filter(g => !storesWith2025Sales.has(g.storeCode));
   } else if (closedStoreOnly) {
-    // Show ONLY stores that are marked as CLOSED in the mapping
-    rows = rows.filter(g => {
-      const mapInfo = STORE_MAPPING[g.storeCode] || {};
-      return mapInfo.status === 'CLOSED';
+    // Show ONLY stores that are marked as CLOSED in the mapping, 
+    // adding them even if they have no sales data in the selected month.
+    const closedStores = Object.keys(STORE_MAPPING).filter(code => STORE_MAPPING[code].status === 'CLOSED');
+    
+    // 1. Filter out any open stores that might be in the current rows
+    rows = rows.filter(g => closedStores.includes(g.storeCode));
+    
+    // 2. Add any closed stores that are missing from the rows (zero sales)
+    const existingCodes = new Set(rows.map(r => r.storeCode));
+    const ctx = getMonthContext();
+    
+    closedStores.forEach(code => {
+      if (!existingCodes.has(code)) {
+        const mapInfo = STORE_MAPPING[code];
+        rows.push({
+          store: `Closed Store ${code}`,
+          storeCode: code,
+          area: 'N/A',
+          segment: mapInfo.segment,
+          format: mapInfo.format,
+          month: ctx.curM,
+          monthLabel: MONTHS[ctx.curM - 1],
+          target: 0, net2025: 0, orders2025: 0, net2026: 0, orders2026: 0,
+          days2025: 0, days2026: 0
+        });
+      }
     });
   }
 

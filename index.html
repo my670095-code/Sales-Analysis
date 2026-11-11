@@ -4076,7 +4076,7 @@ ${clone.outerHTML}
     }
   });
 
-    document.querySelectorAll('.fa-export-excel').forEach(btn => {
+     document.querySelectorAll('.fa-export-excel').forEach(btn => {
       btn.addEventListener('click', () => {
         const wb = XLSX.utils.book_new();
         
@@ -4091,25 +4091,35 @@ ${clone.outerHTML}
           if (!tableEl) return;
 
           const aoa = [];
-          tableEl.querySelectorAll('thead tr').forEach(tr => {
-            const row = [];
-            tr.querySelectorAll('th').forEach(th => {
-              const cs = parseInt(th.getAttribute('colspan') || 1);
-              row.push(th.innerText.trim());
-              for (let i = 1; i < cs; i++) row.push('');
-            });
-            aoa.push(row);
-          });
+
+          // 1. Build the custom header (matching the visual layout exactly)
+          aoa.push(['', '2025', '', '', '', 'PREV MONTH', '', '', '', '2026', '', '', '', 'RATIOS', '', '', 'WASTAGE', '', '']);
+          aoa.push(['', 'DAYS', 'SALES', 'ADT', 'AT', 'DAYS', 'SALES', 'ADT', 'AT', 'DAYS', 'SALES', 'ADT', 'AT', 'LFL', 'TGT', 'MOM', 'WASTE', 'WASTE %', 'WASTE QTY']);
+
+          // 2. Build the data rows
           tableEl.querySelectorAll('tbody tr').forEach(tr => {
             const row = [];
             tr.querySelectorAll('td').forEach(td => {
+              // Clean the text (remove commas, change em-dash to blank)
               const x = td.innerText.trim().replace(/,/g, '');
               row.push(x === '—' ? '' : x);
             });
+            // Ensure the row has exactly 19 columns (in case a sub-row is weirdly formatted)
+            while (row.length < 19) row.push('');
             aoa.push(row);
           });
 
           const ws = XLSX.utils.aoa_to_sheet(aoa);
+          
+          // Auto-size columns for readability
+          ws['!cols'] = [
+            {wch:20},{wch:6},{wch:10},{wch:8},{wch:6},
+            {wch:6},{wch:10},{wch:8},{wch:6},
+            {wch:6},{wch:10},{wch:8},{wch:6},
+            {wch:8},{wch:8},{wch:8},
+            {wch:10},{wch:8},{wch:10}
+          ];
+
           XLSX.utils.book_append_sheet(wb, ws, t.name);
         });
 
@@ -4120,10 +4130,10 @@ ${clone.outerHTML}
         a.href = url; a.download = `Format-AM_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast('All Format/AM tables exported to one Excel file', 'success');
+        showToast('All tables exported to Excel successfully', 'success');
       });
     });
-      document.querySelectorAll('.fa-export-pdf').forEach(btn => {
+    document.querySelectorAll('.fa-export-pdf').forEach(btn => {
       btn.addEventListener('click', () => {
         const tableId = btn.dataset.table;
         const tableContainer = document.getElementById(tableId)?.closest('.table-container');
@@ -4138,13 +4148,23 @@ ${clone.outerHTML}
 
         const printHTML = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
         <style>
-          @page { size: A4 landscape; margin: 8mm; }
+          @page { size: A4 landscape; margin: 5mm; }
           body { font-family: 'Inter', system-ui, sans-serif; color:#0b1b33; background:#fff; margin:0; padding:0; }
           h1 { font-size:16px; margin:0 0 10px; padding-bottom:8px; border-bottom:2px solid #3b82f6; }
-          table { width:100%; border-collapse:collapse; font-size:8px; }
-          th, td { padding:4px 6px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
-          th:first-child, td:first-child { text-align:left; }
-          thead th { background:#f8fafc; font-size:7px; text-transform:uppercase; }
+          
+          /* Scale the table down to fit all 19 columns */
+          table { 
+            width:100%; 
+            border-collapse:collapse; 
+            font-size:7px; 
+            transform: scale(0.85); 
+            transform-origin: top left;
+            width: 117%; /* Compensate for the scale */
+          }
+          
+          th, td { padding:2px 4px; border-bottom:1px solid #eef2f8; text-align:right; white-space:nowrap; }
+          th:first-child, td:first-child { text-align:left; font-weight:bold; }
+          thead th { background:#f8fafc; font-size:6px; text-transform:uppercase; }
           th.group-2025 { background:#eff6ff; color:#1d4ed8; }
           th.group-prev { background:#fef9ee; color:#b45309; }
           th.group-2026 { background:#f0fdf4; color:#15803d; }
@@ -4158,6 +4178,7 @@ ${clone.outerHTML}
           .cell-negative, .pct-down { color:#b91c1c; }
           tr { page-break-inside: avoid; break-inside: avoid; }
           thead { display: table-header-group; }
+          
           .toolbar { position:fixed; top:10px; right:10px; background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer; z-index:9999; }
           @media print { .toolbar { display:none; } }
         </style></head><body>
@@ -4171,7 +4192,7 @@ ${clone.outerHTML}
         w.document.open(); w.document.write(printHTML); w.document.close();
         showToast('PDF preview opened', 'success');
       });
-  });
+    });
 
 
 

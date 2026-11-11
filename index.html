@@ -1732,17 +1732,17 @@ let faLfl = false, faNew = false, faAds = false;
         const orders = Number(String(row[cOrders] ?? '').replace(/,/g, '')) || 0;
         const gross = Number(String(row[cGross] ?? '').replace(/,/g, '')) || 0;
         
-        let target = 0;
-        if (cTarget >= 0) {
-          const tv = row[cTarget];
-          if (tv != null && String(tv).trim() !== '' && !isFormula(tv)) { 
-            const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0; 
-            if (n > 0) target = n; 
-          }
-        }
-        
-        let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
-        if (!area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
+       let target = 0;
+if (cTarget >= 0) {
+  const tv = row[cTarget];
+  if (tv != null && !isFormula(tv)) {
+    const n = Number(String(tv).replace(/[^0-9.\-]/g, '')) || 0;
+    if (n > 0 && n < 1e9) target = n;   // sanity cap
+  }
+}
+
+let area = cArea >= 0 ? cleanText(row[cArea], '') : '';
+if (isFormula(area) || !area || area.toLowerCase() === 'unknown') area = 'UNASSIGNED';
         
         const segRaw = cSegment >= 0 ? cleanText(row[cSegment], '') : '';
         const segment = segRaw || 'UNMAPPED'; // Fallback tables omitted for clean paste, this is fine
@@ -1752,12 +1752,11 @@ let faLfl = false, faNew = false, faAds = false;
         const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
         const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
         const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
-        
-        let net = 0;
-        if (gross > 0) net = gross - (tax || 0);
-        else if (explicitNet !== null) net = explicitNet;
-        else if (amt !== null) net = amt;
-        else net = gross;
+let net = 0;
+if (explicitNet !== null && explicitNet !== 0) net = explicitNet;   // prefer Net Amount column
+else if (gross > 0) net = gross - (tax || 0);
+else if (amt !== null) net = amt;
+else net = gross;
         
         rows.push({ 
           store, storeCode: code, dob, dobStr: toYMD(dob), 

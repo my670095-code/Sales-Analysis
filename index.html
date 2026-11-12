@@ -2383,7 +2383,11 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       );
       // 4. Net sales (prefer 'net' over 'gross')
       let cNet = lower.findIndex(h => h.includes('net') && (h.includes('amount') || h.includes('sales') || h === 'net'));
-      let cGross = lower.findIndex(h => h.includes('gross') || (h.includes('amount') && !h.includes('tax') && !h.includes('net')));
+    let cGross = lower.findIndex(h =>
+  h.includes('gross') ||
+  (h.includes('incl') && h.includes('tax')) ||
+  (h.includes('amount') && !h.includes('excl') && !h.includes('net') && !h.includes('before'))
+);
       let cAmt = lower.findIndex(h => h === 'amount' || h === 'amt' || h.includes('total amount'));
       // 5. Target & area
       let cTarget = lower.findIndex(h => h.includes('target') || h.includes('budget') || h.includes('plan'));
@@ -2391,7 +2395,7 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       let cSegment = lower.findIndex(h => h.includes('segment'));
       let cFormat = lower.findIndex(h => h.includes('format'));
       let cCode = lower.findIndex(h => h === 'code' || h.includes('store code') || h.includes('str code'));
-      let cTax = lower.findIndex(h => h.includes('tax'));
+
 
       // 6. Safe fallbacks
       if (cStore < 0) cStore = 0;
@@ -2435,15 +2439,15 @@ function getMaxDayForMonth(targetYear, targetMonth) {
         const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
         const format = fmtRaw || mapInfo.format || 'UNMAPPED';
 
-        const tax = cTax >= 0 ? Number(String(row[cTax] ?? '').replace(/,/g, '')) || 0 : null;
-        const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
-        const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
+    const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
+const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
 
-        let net = 0;
-        if (explicitNet !== null && explicitNet !== 0) net = explicitNet;
-        else if (gross > 0) net = gross - (tax || 0);
-        else if (amt !== null) net = amt;
-        else net = gross;
+// Sales = Gross Amount, INCLUSIVE of tax
+let net = 0;
+if (gross > 0) net = gross;
+else if (amt !== null && amt > 0) net = amt;
+else if (explicitNet !== null) net = explicitNet;
+else net = gross;
 
         rows.push({
           store, storeCode: code, dob, dobStr: toYMD(dob),

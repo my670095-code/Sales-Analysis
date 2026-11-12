@@ -2383,11 +2383,8 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       );
       // 4. Net sales (prefer 'net' over 'gross')
       let cNet = lower.findIndex(h => h.includes('net') && (h.includes('amount') || h.includes('sales') || h === 'net'));
-    let cGross = lower.findIndex(h =>
-  h.includes('gross') ||
-  (h.includes('incl') && h.includes('tax')) ||
-  (h.includes('amount') && !h.includes('excl') && !h.includes('net') && !h.includes('before'))
-);
+      let cGross = lower.findIndex(h => h === 'gross amount' || h === 'gross');
+      let cInclTax = lower.findIndex(h => h === 'incl tax' || (h.includes('incl') && h.includes('tax')));
       let cAmt = lower.findIndex(h => h === 'amount' || h === 'amt' || h.includes('total amount'));
       // 5. Target & area
       let cTarget = lower.findIndex(h => h.includes('target') || h.includes('budget') || h.includes('plan'));
@@ -2402,7 +2399,8 @@ function getMaxDayForMonth(targetYear, targetMonth) {
       if (cDate < 0) cDate = -1;
       if (cOrders < 0) cOrders = -1;
       if (cNet < 0) cNet = -1;
-      if (cGross < 0) cGross = -1;
+          if (cGross < 0) cGross = -1;
+      if (cInclTax < 0) cInclTax = -1;
       if (cAmt < 0) cAmt = -1;
 
       const rows = [];
@@ -2439,15 +2437,17 @@ function getMaxDayForMonth(targetYear, targetMonth) {
         const fmtRaw = cFormat >= 0 ? cleanText(row[cFormat], '') : '';
         const format = fmtRaw || mapInfo.format || 'UNMAPPED';
 
-    const amt = cAmt >= 0 ? Number(String(row[cAmt] ?? '').replace(/,/g, '')) || 0 : null;
-const explicitNet = cNet >= 0 ? Number(String(row[cNet] ?? '').replace(/,/g, '')) || 0 : null;
+    const amt       = cAmt     >= 0 ? Number(String(row[cAmt]     ?? '').replace(/,/g, '')) || 0 : null;
+    const inclTax   = cInclTax >= 0 ? Number(String(row[cInclTax] ?? '').replace(/,/g, '')) || 0 : null;
+    const explicitNet = cNet   >= 0 ? Number(String(row[cNet]     ?? '').replace(/,/g, '')) || 0 : null;
 
-// Sales = Gross Amount, INCLUSIVE of tax
-let net = 0;
-if (gross > 0) net = gross;
-else if (amt !== null && amt > 0) net = amt;
-else if (explicitNet !== null) net = explicitNet;
-else net = gross;
+    // Sales = Gross Amount minus Incl Tax (the tax amount).
+    // Falls back gracefully if a column is missing.
+    let net = 0;
+    if (gross > 0 && inclTax !== null) net = gross - inclTax;
+    else if (gross > 0)                net = gross;
+    else if (explicitNet !== null)     net = explicitNet;
+    else if (amt !== null)             net = amt;
 
         rows.push({
           store, storeCode: code, dob, dobStr: toYMD(dob),
